@@ -7,7 +7,7 @@ A lightweight, mobile-friendly web app where K-12 teachers post short STEM chall
 Built by a Judson University student team as part of the **Fall 2026 APS Data Technologies Internship** (Oct 26 – Dec 11, 2026).
 
 🔗 **Live app:** _coming soon (Vercel link)_
-🎨 **Figma:** _link coming soon_
+🎨 **Figma:** https://www.figma.com/design/Zd8MtyHyHS572maRVCAl9u/STEM-Challenge-Hub?node-id=27-2&t=nVBc4dz7RhfkKLmz-1
 
 > ⚠️ **Demo project, fictional data only.** This app uses made-up teachers, students and classes (`@example.com` accounts). Never enter real student or teacher names, emails or records.
 
