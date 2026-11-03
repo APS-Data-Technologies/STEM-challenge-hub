@@ -34,6 +34,7 @@
 | TC-16 | Answer Key Security | Try accessing the correct answer key as a student. | Student cannot access the answer key. | | Not Tested | |
 | TC-17 | Responsive Design | Open the website on phone, tablet and laptop. | Website displays correctly on all devices. | | Not Tested | |
 | TC-18 | Browser Compatibility | Open the website using Chrome and Safari. | Website works correctly in both browsers. | | Not Tested | |
+| TC-19 | Public Vercel Link | Open the public Vercel URL in a browser. | Website opens successfully and loads without errors. | | Not Tested | |
 
 ## Bug Reporting
 
@@ -50,7 +51,7 @@ If a test fails, record the following information in Asana:
 
 ## Testing Summary
 
-- Total test cases: 18
+- Total test cases: 19
 - Passed:
 - Failed:
 - Not tested:
