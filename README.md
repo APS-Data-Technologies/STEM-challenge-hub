@@ -119,7 +119,12 @@ In the Supabase SQL editor, run the SQL files in `/supabase` to create the table
 
 Run the seed script in `/supabase` to load 2 teachers, 3 classes, 15 fictional students and a set of original sample challenges.
 
-**Demo accounts:** _listed here once seed data is final (e.g. `teacher1@example.com`)_
+**Demo accounts (fictional, for testing only).** Every account uses the password `DemoPass123!`
+
+| Role    | Email |
+|---------|-------|
+| Teacher | teacher1@example.com, teacher2@example.com |
+| Student | student01@example.com … student15@example.com |
 
 ### 5. Run locally
 
