@@ -195,28 +195,22 @@ export function AuthScreen({
             <form className="auth-form" onSubmit={handleSubmit} ref={formRef}>
               {recovery ? (
                 <>
-                  <label className="field-label">
-                    New password
-                    <input
-                      autoComplete="new-password"
-                      minLength={8}
-                      name="password"
-                      placeholder="At least 8 characters"
-                      required
-                      type="password"
-                    />
-                  </label>
-                  <label className="field-label">
-                    Confirm new password
-                    <input
-                      autoComplete="new-password"
-                      minLength={8}
-                      name="confirmPassword"
-                      placeholder="Enter your new password again"
-                      required
-                      type="password"
-                    />
-                  </label>
+                  <PasswordField
+                    autoComplete="new-password"
+                    label="New password"
+                    minLength={8}
+                    name="password"
+                    placeholder="At least 8 characters"
+                    required
+                  />
+                  <PasswordField
+                    autoComplete="new-password"
+                    label="Confirm new password"
+                    minLength={8}
+                    name="confirmPassword"
+                    placeholder="Enter your new password again"
+                    required
+                  />
                 </>
               ) : (
                 <>
@@ -264,19 +258,16 @@ export function AuthScreen({
                       type="email"
                     />
                   </label>
-                  <label className="field-label">
-                    Password
-                    <input
-                      autoComplete={
-                        mode === 'signin' ? 'current-password' : 'new-password'
-                      }
-                      minLength={8}
-                      name="password"
-                      placeholder="At least 8 characters"
-                      required
-                      type="password"
-                    />
-                  </label>
+                  <PasswordField
+                    autoComplete={
+                      mode === 'signin' ? 'current-password' : 'new-password'
+                    }
+                    label="Password"
+                    minLength={8}
+                    name="password"
+                    placeholder="At least 8 characters"
+                    required
+                  />
                   {mode === 'signin' ? (
                     <button
                       className="auth-forgot"
@@ -323,5 +314,50 @@ export function AuthScreen({
         </section>
       </div>
     </main>
+  )
+}
+
+function PasswordField({
+  autoComplete,
+  label,
+  minLength,
+  name,
+  placeholder,
+  required,
+}: {
+  autoComplete: string
+  label: string
+  minLength: number
+  name: string
+  placeholder: string
+  required: boolean
+}) {
+  const [visible, setVisible] = useState(false)
+
+  return (
+    <div className="field-label auth-password-field">
+      <label htmlFor={name}>{label}</label>
+      <div className="auth-password-control">
+        <input
+          autoComplete={autoComplete}
+          id={name}
+          minLength={minLength}
+          name={name}
+          placeholder={placeholder}
+          required={required}
+          type={visible ? 'text' : 'password'}
+        />
+        <button
+          aria-label={`${visible ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+          aria-pressed={visible}
+          className="auth-password-toggle"
+          onClick={() => setVisible((current) => !current)}
+          title={`${visible ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+          type="button"
+        >
+          {visible ? 'Hide' : 'Show'}
+        </button>
+      </div>
+    </div>
   )
 }
