@@ -110,8 +110,8 @@ create policy "challenge_keys: teacher manages own"
   with check (public.teaches_challenge(challenge_id));
 
 -- ---------- submissions --------------------------------------------------
--- No insert/update policy: students submit only through submit_answer(),
--- so nobody can write is_correct = true themselves.
+-- No student insert/update policy: students submit through submit_answer().
+-- Teachers may update only is_correct after evaluating a response.
 create policy "submissions: student reads own"
   on public.submissions for select to authenticated
   using (student_id = auth.uid());
@@ -119,6 +119,27 @@ create policy "submissions: student reads own"
 create policy "submissions: teacher reads own classes"
   on public.submissions for select to authenticated
   using (public.teaches_challenge(challenge_id));
+
+-- Only teachers of the challenge's class can evaluate short answers.
+revoke update on public.submissions from anon, authenticated;
+grant update (is_correct) on public.submissions to authenticated;
+
+create policy "submissions: teacher evaluates own classes"
+  on public.submissions for update to authenticated
+  using (
+    public.teaches_challenge(submissions.challenge_id)
+    and exists (
+      select 1 from public.challenges ch
+      where ch.id = submissions.challenge_id and ch.answer_type = 'short_answer'
+    )
+  )
+  with check (
+    public.teaches_challenge(submissions.challenge_id)
+    and exists (
+      select 1 from public.challenges ch
+      where ch.id = submissions.challenge_id and ch.answer_type = 'short_answer'
+    )
+  );
 
 -- =====================================================================
 -- Database functions called from the app with supabase.rpc(...)
@@ -160,22 +181,20 @@ begin
 end
 $$;
 
--- submit_answer(challenge_id, answer): saves the answer (replacing any
--- earlier one). Returns 'correct' / 'incorrect' for multiple choice,
--- 'saved' for short answer. The key never leaves the database.
+-- submit_answer(challenge_id, answer): grades multiple-choice answers here;
+-- short answers are saved for their teacher to review.
 create or replace function public.submit_answer(challenge_id uuid, answer text)
-returns text
+returns boolean
 language plpgsql
 security definer
 set search_path = ''
 as $$
 #variable_conflict use_column
 declare
-  v_class_id   uuid;
-  v_type       text;
-  v_published  boolean;
-  v_key        text;
-  v_correct    boolean;
+  v_class_id    uuid;
+  v_published   boolean;
+  v_answer_type text;
+  v_is_correct  boolean;
 begin
   if auth.uid() is null then
     raise exception 'Not signed in';
@@ -185,8 +204,8 @@ begin
     raise exception 'Answer is empty';
   end if;
 
-  select ch.class_id, ch.answer_type, ch.is_published
-    into v_class_id, v_type, v_published
+  select ch.class_id, ch.is_published, ch.answer_type
+    into v_class_id, v_published, v_answer_type
   from public.challenges ch
   where ch.id = submit_answer.challenge_id;
 
@@ -198,26 +217,33 @@ begin
     raise exception 'Challenge not found';
   end if;
 
-  if v_type = 'multiple_choice' then
-    select k.correct_choice into v_key
-    from public.challenge_keys k
-    where k.challenge_id = submit_answer.challenge_id;
+  if v_answer_type = 'multiple_choice' then
+    select ck.correct_choice = trim(submit_answer.answer)
+      into v_is_correct
+    from public.challenge_keys ck
+    where ck.challenge_id = submit_answer.challenge_id;
 
-    v_correct := (v_key is not null and trim(submit_answer.answer) = v_key);
+    if v_is_correct is null then
+      raise exception 'Challenge answer key is not configured';
+    end if;
+  else
+    v_is_correct := null;
   end if;
 
   insert into public.submissions (challenge_id, student_id, answer, is_correct, submitted_at)
-  values (submit_answer.challenge_id, auth.uid(), trim(submit_answer.answer), v_correct, now())
+  values (
+    submit_answer.challenge_id,
+    auth.uid(),
+    trim(submit_answer.answer),
+    v_is_correct,
+    now()
+  )
   on conflict on constraint one_submission_per_student do update
     set answer       = excluded.answer,
         is_correct   = excluded.is_correct,
         submitted_at = excluded.submitted_at;
 
-  return case
-    when v_type = 'short_answer' then 'saved'
-    when v_correct then 'correct'
-    else 'incorrect'
-  end;
+  return v_is_correct;
 end
 $$;
 

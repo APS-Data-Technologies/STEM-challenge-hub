@@ -129,10 +129,16 @@ join public.classes c on c.join_code = k.code
 join public.challenges ch on ch.class_id = c.id and ch.title = k.title
 on conflict (challenge_id) do update set correct_choice = excluded.correct_choice;
 
--- ---------- 6. A few sample submissions (so the progress table isn't empty)
+-- ---------- 6. Sample submissions --------------------------------------
 insert into public.submissions (challenge_id, student_id, answer, is_correct)
-select ch.id, u.id, s.answer,
-       case when ch.answer_type = 'multiple_choice' then s.answer = k.correct_choice end
+select
+  ch.id,
+  u.id,
+  s.answer,
+  case
+    when ch.answer_type = 'multiple_choice' then s.answer = ck.correct_choice
+    else null
+  end
 from (values
   ('student01@example.com', 'SCI7A2', 'Ice cube race',     'Metal tray'),
   ('student02@example.com', 'SCI7A2', 'Ice cube race',     'Metal tray'),
@@ -148,5 +154,5 @@ from (values
 join auth.users u on u.email = s.email
 join public.classes c on c.join_code = s.code
 join public.challenges ch on ch.class_id = c.id and ch.title = s.title
-left join public.challenge_keys k on k.challenge_id = ch.id
+left join public.challenge_keys ck on ck.challenge_id = ch.id
 on conflict on constraint one_submission_per_student do nothing;

@@ -7,7 +7,7 @@ A lightweight, mobile-friendly web app where K-12 teachers post short STEM chall
 Built by a Judson University student team as part of the **Fall 2026 APS Data Technologies Internship** (Oct 26 – Dec 11, 2026).
 
 🔗 **Live app:** _coming soon (Vercel link)_
-🎨 **Figma:** _link coming soon_
+🎨 **Figma:** [STEM Challenge Hub](https://www.figma.com/design/Zd8MtyHyHS572maRVCAl9u/STEM-Challenge-Hub?node-id=27-2&t=nVBc4dz7RhfkKLmz-1)
 
 > ⚠️ **Demo project, fictional data only.** This app uses made-up teachers, students and classes (`@example.com` accounts). Never enter real student or teacher names, emails or records.
 
@@ -40,12 +40,18 @@ Teachers want quick ways to give hands-on practice (a math puzzle, a science pre
 
 | # | Feature | What it does |
 |---|---------|--------------|
-| 1 | **Sign in with two roles** | Teacher and student accounts. Teachers land on *My classes*; students land on *My challenges*. Students can't open teacher pages. |
+| 1 | **Sign in with two roles** | Teacher and student accounts with email password recovery. Teachers land on *My classes*; students land on *My challenges*. Students can't open teacher pages. |
 | 2 | **Create a challenge** | Teachers create, edit and delete challenges with a subject (Science, Technology, Engineering, Math), grade band and answer type (multiple choice or short answer). |
 | 3 | **Join a class** | Each class gets a unique ~6-character join code. Students enter it to see that class's challenges. |
-| 4 | **Submit answers** | Students answer challenges and get instant "correct" / "try again" feedback on multiple choice. Short answers are saved for the teacher. |
-| 5 | **Teacher progress view** | A table with one row per student and one column per challenge: not started, completed, correct or incorrect. |
+| 4 | **Submit answers** | Students get immediate correct/try-again feedback for multiple-choice answers. Short answers are saved for teacher review. |
+| 5 | **Teacher progress view** | A table with one row per student and one column per challenge, showing not started, awaiting review for short answers, or correct/incorrect. |
 | 6 | **Live on the web** | Public link that works on phone, tablet and laptop (Chrome and Safari). |
+
+### Frontend coverage
+
+The current frontend implements the v1 teacher and student flows: role-aware sign-up/sign-in and email password recovery, class creation and joining, class management, challenge drafts and publishing, immediate database-checked feedback for multiple-choice submissions, teacher review of short answers, teacher progress summaries, and profile display-name updates. The sign-in screen and signed-in workspace use the Figma visual draft as a reference; the sign-in screen includes an interactive STEM illustration with changing math problems, a color-changing chemistry flask, a horizontally rotating biology cell, and a robot giggle interaction. The workspace includes role-based side navigation, a class greeting banner, challenge cards with submission progress, and a student discoveries summary. It uses the Supabase policies and RPCs in `/supabase`; the app does not grant access based on a client-selected role.
+
+The optional challenge library/filters are marked **Stretch**, and the public marketing home is marked **Extra** in the flow document, so they are not included in the v1 app.
 
 ### Stretch (only if must-haves pass testing by Fri Nov 20)
 
@@ -82,7 +88,7 @@ Every tool is free or on a free tier.
               (row-level security on every table)
 ```
 
-- **Grading happens in the database.** The correct answer lives in a separate `challenge_keys` table that students can't read. The `submit_answer` function checks the answer and returns correct/incorrect, so the answer key is never sent to the student's browser.
+- **Teachers evaluate submissions.** Multiple-choice answer keys live in a separate `challenge_keys` table that students can't read. Submitting an answer does not reveal correctness; only a teacher can evaluate that student's response. Students see the evaluation after the teacher records it.
 - **Joining a class** goes through the `join_class(code)` function, because students can't read a class before they join it.
 
 ## Getting started
@@ -113,13 +119,18 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 ### 3. Set up the database
 
-In the Supabase SQL editor, run the SQL files in `/supabase` to create the tables, row-level security policies and database functions. Running them on an empty project recreates everything.
+In the Supabase SQL editor, run `01_schema.sql`, `02_security.sql`, `03_seed.sql`, and `05_scope_multiple_choice_feedback.sql` in that order. Do not run the historical `04_teacher_evaluation.sql` for a new project.
 
 ### 4. Load the fictional seed data
 
 Run the seed script in `/supabase` to load 2 teachers, 3 classes, 15 fictional students and a set of original sample challenges.
 
-**Demo accounts:** _listed here once seed data is final (e.g. `teacher1@example.com`)_
+**Fictional demo accounts** (created by `03_seed.sql`; password for all is `DemoPass123!`):
+
+- Teachers: `teacher1@example.com`, `teacher2@example.com`
+- Students: `student01@example.com` through `student15@example.com`
+
+These are only for a project using the fictional seed data. Supabase email signup may be rate-limited; seeded accounts can be used to sign in after the seed script has run.
 
 ### 5. Run locally
 
@@ -129,9 +140,28 @@ npm run dev
 
 Open the local URL Vite prints (usually http://localhost:5173).
 
+### Test on a phone or tablet
+
+Connect the device and development computer to the same Wi-Fi network, then start Vite so other devices can reach it:
+
+```bash
+npm run dev -- --host 0.0.0.0
+```
+
+Open the **Network** URL printed by Vite on the phone or tablet. If Windows Firewall prompts you, allow access on your private network. The development server is then reachable to devices on that network; stop it when you finish testing.
+
 ### Deploying
 
-Merging a pull request into `main` redeploys the live app on Vercel automatically. Every PR also gets a preview link.
+#### Connect the GitHub repository
+
+1. In Vercel, choose **New Project** and import `APS-Data-Technologies/STEM-challenge-hub`.
+2. Keep the project root at `./`. Vercel detects Vite; the build command is `npm run build` and the output directory is `dist`.
+3. Set the production branch to `main` and enable Git deployment previews.
+4. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the Vercel project's environment variables for Production, Preview and Development when the Supabase project is ready.
+
+After the GitHub integration is connected, merges to `main` deploy to Production and pull requests receive Preview deployments. No separate backend server is needed; the frontend connects to Supabase using its public anon key and database row-level security. Never add the Supabase service-role key to the frontend or commit environment files.
+
+For local development, copy `.env.example` to `.env` and fill in the Supabase project values. `.env` files are ignored by Git.
 
 ## Database
 
@@ -144,7 +174,7 @@ Supabase / Postgres. Row-level security (RLS) is **on for every table**.
 | `enrollments` | Students in each class | `class_id`, `student_id`, `joined_at` (no duplicates) |
 | `challenges` | A STEM challenge in one class | `id`, `class_id`, `created_by`, `title`, `prompt`, `subject`, `grade_band`, `answer_type`, `choices`, `is_published`, `created_at` |
 | `challenge_keys` | Correct answers (students have no access) | `challenge_id`, `correct_choice` |
-| `submissions` | A student's answer | `id`, `challenge_id`, `student_id`, `answer`, `is_correct`, `submitted_at` |
+| `submissions` | A student's answer and result | `id`, `challenge_id`, `student_id`, `answer`, `is_correct` (automatic for multiple choice; null for short answer until review), `submitted_at` |
 
 ### Access rules (summary)
 
@@ -155,12 +185,14 @@ Supabase / Postgres. Row-level security (RLS) is **on for every table**.
 | `enrollments` | Read and remove for own classes | Read own (join only via `join_class`) |
 | `challenges` | Full control in own classes | Read published challenges in their classes |
 | `challenge_keys` | Create/read/edit for own classes | **No access** |
-| `submissions` | Read for own classes | Create and read own only |
+| `submissions` | Read submissions; evaluate short answers in own classes | Submit through `submit_answer`; read own answers and immediate multiple-choice results, or short-answer results after teacher review |
 
 ### Database functions
 
 - `join_class(code)`: adds the signed-in student to the class with that code. A wrong code returns an error; joining twice does nothing.
-- `submit_answer(challenge_id, answer)`: saves the answer and, for multiple choice, returns correct or incorrect without exposing the key.
+- `submit_answer(challenge_id, answer)`: saves or replaces the student's response. Multiple-choice answers are checked against the protected answer key in the database and return correct/incorrect feedback; short answers remain ungraded until a teacher evaluates them.
+
+For a new Supabase project, run `01_schema.sql`, `02_security.sql`, `03_seed.sql`, and `05_scope_multiple_choice_feedback.sql` in that order. `04_teacher_evaluation.sql` is a historical migration and is not needed for new installs. For an existing project, run `05_scope_multiple_choice_feedback.sql` once after its existing migrations; it recalculates multiple-choice results from the protected answer keys and limits teacher evaluations to short-answer submissions. Do not run `04_teacher_evaluation.sql` again on an existing project because it clears submission results.
 
 ## How we work
 
