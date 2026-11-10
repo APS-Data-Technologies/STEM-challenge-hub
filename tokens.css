@@ -1,0 +1,335 @@
+/* ==========================================================================
+   STEM Challenge Hub — Design tokens (tokens.css)
+   Source: Figma file "STEM Challenge Hub" → Style Guide + Color Mockups pages
+   Values were read from the Figma design (Nov 2026). Every text/background pair
+   listed in the Style Guide meets WCAG AA (4.5:1 or higher).
+
+   How to use (React + Vite):
+     1. Put this file in  src/styles/tokens.css
+     2. In src/main.jsx add:  import './styles/tokens.css';
+     3. Use the variables in CSS:  color: var(--color-text);
+   Load the font once in index.html:
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+   ========================================================================== */
+
+:root {
+  /* ------------------------------------------------------------------
+     1. Color — brand & core
+     ------------------------------------------------------------------ */
+  --color-primary:            #1D4ED8; /* buttons, links, selected (6.7:1 with white) */
+  --color-primary-hover:      #1E40AF;
+  --color-primary-dark:       #1E3A8A; /* text on light-blue pills */
+  --color-on-primary:         #FFFFFF;
+  --color-primary-tint:       #EFF4FF; /* selected rows, table header */
+  --color-primary-tint-2:     #EFF6FF; /* info notes, light blue panels */
+  --color-primary-100:        #DBEAFE; /* to-do pill, technology tag */
+  --color-primary-200:        #BFDBFE; /* light blue borders */
+
+  --color-accent:             #FACC15; /* yellow: logo, join codes, stars (11.7:1 with navy) */
+  --color-accent-dark:        #EAB308;
+  --color-on-accent:          #0F172A;
+
+  /* ------------------------------------------------------------------
+     2. Color — text
+     ------------------------------------------------------------------ */
+  --color-text:               #0F172A; /* headings + body (17.9:1 on white) */
+  --color-text-secondary:     #334155;
+  --color-text-muted:         #475569; /* secondary text (7.6:1 on white) */
+  --color-text-disabled:      #94A3B8;
+  --color-text-inverse:       #FFFFFF;
+  --color-link:               var(--color-primary);
+
+  /* ------------------------------------------------------------------
+     3. Color — surfaces & borders
+     ------------------------------------------------------------------ */
+  --color-bg-page:            #F8FAFC; /* screen background */
+  --color-bg-surface:         #FFFFFF; /* cards, dialogs, inputs */
+  --color-bg-subtle:          #F1F5F9;
+  --color-border:             #CBD5E1; /* card + field borders (decorative) */
+  --color-divider:            #E2E8F0;
+  --color-border-strong:      #94A3B8;
+  --color-backdrop:           rgba(0, 0, 0, 0.40); /* dim behind pop-ups */
+
+  /* ------------------------------------------------------------------
+     4. Color — feedback
+     ------------------------------------------------------------------ */
+  --color-success-bg:         #DCFCE7; /* Correct! */
+  --color-success-fg:         #15803D;
+  --color-success-strong:     #14532D;
+  --color-warning-bg:         #FEF3C7; /* Try again */
+  --color-warning-fg:         #B45309;
+  --color-warning-strong:     #78350F;
+  --color-warning-border:     #F59E0B;
+  --color-warning-surface:    #FFFBEB; /* notes / scope boxes */
+  --color-error-bg:           #FEE2E2; /* wrong code, incorrect password */
+  --color-error-fg:           #B91C1C;
+  --color-info-bg:            var(--color-primary-tint-2);
+  --color-info-fg:            var(--color-primary-dark);
+
+  /* ------------------------------------------------------------------
+     5. Color — subjects (tag background / tag text)
+     ------------------------------------------------------------------ */
+  --color-science-bg:         #DCFCE7;
+  --color-science-fg:         #15803D;
+  --color-technology-bg:      #DBEAFE;
+  --color-technology-fg:      #1D4ED8;
+  --color-engineering-bg:     #FFEDD5;
+  --color-engineering-fg:     #C2410C;
+  --color-math-bg:            #F3E8FF;
+  --color-math-fg:            #7E22CE;
+  --color-grade-tag-bg:       #E2E8F0; /* "GRADES 6-8" tag */
+  --color-grade-tag-fg:       #0F172A;
+
+  /* ------------------------------------------------------------------
+     6. Color — challenge status (pills + badges)
+     ------------------------------------------------------------------ */
+  --color-status-todo-bg:     #DBEAFE; /* "To do · Not started yet" */
+  --color-status-todo-fg:     #1E3A8A;
+  --color-status-done-bg:     #DCFCE7; /* "Done · Correct answer" */
+  --color-status-done-fg:     #14532D;
+  --color-status-review-bg:   #FEF3C7; /* "Done · Waiting for teacher review" */
+  --color-status-review-fg:   #78350F;
+  --color-badge-completed:    #15803D; /* COMPLETED badge (white text) */
+  --color-badge-review:       #B45309; /* IN REVIEW badge (white text) */
+  --color-badge-new-bg:       #FEF3C7; /* NEW · DRAFT */
+  --color-badge-new-fg:       #78350F;
+  --color-row-new-bg:         #FFF8E1; /* copied-from-library row highlight */
+  --color-row-new-border:     #F5C847;
+  --color-published-bg:       #DCFCE7;
+  --color-published-fg:       #15803D;
+  --color-draft-bg:           #FEF3C7;
+  --color-draft-fg:           #B45309;
+
+  /* Other UI accents */
+  --color-video:              #DC2626; /* play badge on "Watch video" */
+  --color-star:               #FACC15; /* rating stars (filled) */
+  --color-star-empty:         #CBD5E1;
+
+  /* ------------------------------------------------------------------
+     7. Typography
+     ------------------------------------------------------------------ */
+  --font-family-base: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+  --font-weight-regular:   400;
+  --font-weight-medium:    500;
+  --font-weight-semibold:  600;
+  --font-weight-bold:      700;
+  --font-weight-extrabold: 800;
+
+  /* size scale (px values from Figma, written in rem; 1rem = 16px) */
+  --font-size-2xs:  0.75rem;   /* 12 — tags, labels */
+  --font-size-xs:   0.8125rem; /* 13 — captions, source links, badges */
+  --font-size-sm:   0.875rem;  /* 14 — helper text, notes */
+  --font-size-md:   0.9375rem; /* 15 — links, card meta */
+  --font-size-base: 1rem;      /* 16 — body, buttons, inputs */
+  --font-size-lg:   1.0625rem; /* 17 */
+  --font-size-xl:   1.125rem;  /* 18 — lead text */
+  --font-size-2xl:  1.25rem;   /* 20 — card titles */
+  --font-size-3xl:  1.375rem;  /* 22 — section titles */
+  --font-size-4xl:  1.5rem;    /* 24 */
+  --font-size-5xl:  1.75rem;   /* 28 — page titles */
+  --font-size-6xl:  2rem;      /* 32 — big headings */
+  --font-size-7xl:  2.375rem;  /* 38 — Home hero */
+
+  --line-height-tight:  1.2;  /* headings */
+  --line-height-snug:   1.35; /* titles, buttons */
+  --line-height-normal: 1.5;  /* body */
+  --line-height-relaxed:1.6;  /* long text */
+
+  --letter-spacing-tag: 0.04em; /* uppercase tags + badges */
+
+  /* semantic text styles (font shorthand: weight size/line-height family) */
+  --text-display:   var(--font-weight-extrabold) var(--font-size-7xl)/var(--line-height-tight) var(--font-family-base);
+  --text-h1:        var(--font-weight-extrabold) var(--font-size-6xl)/var(--line-height-tight) var(--font-family-base);
+  --text-h2:        var(--font-weight-extrabold) var(--font-size-5xl)/var(--line-height-tight) var(--font-family-base);
+  --text-h3:        var(--font-weight-bold)      var(--font-size-3xl)/var(--line-height-snug)  var(--font-family-base);
+  --text-title:     var(--font-weight-semibold)  var(--font-size-2xl)/var(--line-height-snug)  var(--font-family-base);
+  --text-body-lg:   var(--font-weight-regular)   var(--font-size-xl)/var(--line-height-normal) var(--font-family-base);
+  --text-body:      var(--font-weight-regular)   var(--font-size-base)/var(--line-height-normal) var(--font-family-base);
+  --text-body-sm:   var(--font-weight-regular)   var(--font-size-sm)/var(--line-height-normal) var(--font-family-base);
+  --text-label:     var(--font-weight-semibold)  var(--font-size-base)/var(--line-height-snug) var(--font-family-base);
+  --text-button:    var(--font-weight-semibold)  var(--font-size-base)/var(--line-height-snug) var(--font-family-base);
+  --text-link:      var(--font-weight-bold)      var(--font-size-md)/var(--line-height-snug)   var(--font-family-base);
+  --text-caption:   var(--font-weight-semibold)  var(--font-size-xs)/var(--line-height-snug)   var(--font-family-base);
+  --text-tag:       var(--font-weight-semibold)  var(--font-size-2xs)/1 var(--font-family-base);
+
+  /* ------------------------------------------------------------------
+     8. Spacing (4px-based, matches Figma auto-layout gaps/padding)
+     ------------------------------------------------------------------ */
+  --space-0:   0;
+  --space-0-5: 2px;
+  --space-1:   4px;
+  --space-1-5: 6px;
+  --space-2:   8px;
+  --space-2-5: 10px;
+  --space-3:   12px;
+  --space-3-5: 14px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-12:  48px;
+
+  /* ------------------------------------------------------------------
+     9. Radius
+     ------------------------------------------------------------------ */
+  --radius-xs:   4px;   /* small tags */
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;  /* buttons, inputs, list rows */
+  --radius-xl:   16px;  /* cards */
+  --radius-2xl:  20px;  /* large cards, banners */
+  --radius-3xl:  24px;  /* hero panels, challenge cards */
+  --radius-4xl:  32px;
+  --radius-pill: 999px; /* pills, chips, badges */
+
+  /* ------------------------------------------------------------------
+     10. Borders
+     ------------------------------------------------------------------ */
+  --border-width:        1.5px;
+  --border-width-strong: 2px;
+  --border-default:  var(--border-width) solid var(--color-border);
+  --border-focus:    var(--border-width-strong) solid var(--color-primary);
+  --border-error:    var(--border-width) solid var(--color-error-fg);
+
+  /* ------------------------------------------------------------------
+     11. Shadows
+     ------------------------------------------------------------------ */
+  --shadow-sm:     0 2px 6px rgba(0, 0, 0, 0.18);        /* badges */
+  --shadow-card:   0 6px 18px rgba(120, 84, 8, 0.12);    /* challenge + library cards */
+  --shadow-md:     0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg:     0 12px 32px rgba(0, 0, 0, 0.10);
+  --shadow-dialog: 0 12px 32px rgba(0, 0, 0, 0.25);      /* pop-ups */
+
+  /* ------------------------------------------------------------------
+     12. Sizes & layout
+     ------------------------------------------------------------------ */
+  --size-control-height: 48px;  /* buttons + inputs (also the minimum touch target) */
+  --size-chip-height:    40px;  /* filter chips */
+  --size-icon-sm:        16px;
+  --size-icon-md:        24px;
+  --size-icon-lg:        32px;  /* subject icons on library cards */
+  --size-avatar:         40px;
+  --size-topbar:         72px;
+
+  --container-max:       1344px; /* laptop content width (1440 − 2×48) */
+  --page-gutter-laptop:  48px;
+  --page-gutter-tablet:  32px;
+  --page-gutter-phone:   16px;
+  --dialog-width:        480px;  /* phone: 350px */
+  --card-min-width:      320px;
+
+  /* breakpoints (for reference; CSS variables can't be used inside @media) */
+  --bp-phone:  390px;
+  --bp-tablet: 768px;
+  --bp-laptop: 1440px;
+
+  /* ------------------------------------------------------------------
+     13. Focus, motion, layers
+     ------------------------------------------------------------------ */
+  --focus-ring:        0 0 0 3px rgba(29, 78, 216, 0.45); /* visible keyboard focus (WCAG 2.4.7) */
+  --transition-fast:   120ms ease-out;
+  --transition-base:   200ms ease-out;
+
+  --z-base:     0;
+  --z-sticky:   100;  /* top bar */
+  --z-dropdown: 200;
+  --z-overlay:  900;  /* dim backdrop */
+  --z-dialog:   1000; /* pop-ups */
+  --z-toast:    1100;
+
+  /* ------------------------------------------------------------------
+     14. Component tokens (map Figma components → React components)
+     ------------------------------------------------------------------ */
+  /* Button (Figma: WF/Button, Style=Primary | Secondary) */
+  --button-height:         var(--size-control-height);
+  --button-radius:         var(--radius-lg);
+  --button-padding-x:      var(--space-6);
+  --button-primary-bg:     var(--color-primary);
+  --button-primary-fg:     var(--color-on-primary);
+  --button-primary-bg-hover: var(--color-primary-hover);
+  --button-secondary-bg:   var(--color-bg-surface);
+  --button-secondary-fg:   var(--color-text);
+  --button-secondary-border: var(--border-default);
+  --button-danger-fg:      var(--color-error-fg);
+
+  /* Input (Figma: WF/Input) */
+  --input-height:          var(--size-control-height);
+  --input-radius:          var(--radius-lg);
+  --input-padding-x:       var(--space-4);
+  --input-bg:              var(--color-bg-surface);
+  --input-border:          var(--border-default);
+  --input-placeholder:     var(--color-text-muted);
+
+  /* Card (Challenge card, Library card) */
+  --card-bg:               var(--color-bg-surface);
+  --card-radius:           var(--radius-xl);
+  --card-padding:          var(--space-5);
+  --card-gap:              var(--space-3);
+  --card-shadow:           var(--shadow-card);
+  --card-border:           var(--border-default);
+
+  /* Filter chip */
+  --chip-height:           var(--size-chip-height);
+  --chip-radius:           var(--radius-lg);
+  --chip-bg:               var(--color-bg-surface);
+  --chip-fg:               var(--color-text);
+  --chip-selected-bg:      var(--color-primary);
+  --chip-selected-fg:      var(--color-on-primary);
+
+  /* Tag / pill / badge */
+  --tag-radius:            var(--radius-xs);
+  --tag-padding:           var(--space-1) var(--space-2);
+  --pill-radius:           var(--radius-pill);
+  --pill-padding:          var(--space-1-5) var(--space-3);
+
+  /* Dialog (pop-up) */
+  --dialog-bg:             var(--color-bg-surface);
+  --dialog-radius:         var(--radius-2xl);
+  --dialog-padding:        var(--space-6);
+  --dialog-shadow:         var(--shadow-dialog);
+
+  /* Top bar */
+  --topbar-height:         var(--size-topbar);
+  --topbar-bg:             var(--color-bg-surface);
+  --topbar-border:         1px solid var(--color-divider);
+}
+
+/* --------------------------------------------------------------------------
+   Base styles (optional but recommended)
+   -------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { font-size: 100%; } /* 1rem = 16px; respects the user's browser text size */
+
+body {
+  margin: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  background: var(--color-bg-page);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--color-link); font-weight: var(--font-weight-semibold); }
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --transition-fast: 0ms; --transition-base: 0ms; }
+}
+
+/* Responsive page gutter that matches the Figma laptop / tablet / phone frames */
+.page {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding-inline: var(--page-gutter-phone);
+}
+@media (min-width: 768px)  { .page { padding-inline: var(--page-gutter-tablet); } }
+@media (min-width: 1200px) { .page { padding-inline: var(--page-gutter-laptop); } }
