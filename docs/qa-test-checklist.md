@@ -74,9 +74,9 @@ If a test fails, record the following information in Asana:
 ## Testing Summary
 
 - Total test cases: 19
-- Passed: 4
+- Passed: 3
 - Failed: 1
-- Not tested: 14
+- Not tested: 15
 - Blocked: 0
 
 **Note:** TC-14 is marked Fail because the review actions did not work, although the teacher dashboard and View answer feature worked. TC-19 remains Not Tested because the public production deployment has not been confirmed. Only fictional demo accounts and data were used.
