@@ -4,7 +4,7 @@ export type GradeBand = 'K-2' | '3-5' | '6-8' | '9-12'
 export type AnswerType = 'multiple_choice' | 'short_answer'
 
 export interface AnswerFeedback {
-  kind: 'success' | 'error'
+  kind: 'success' | 'retry' | 'error'
   message: string
 }
 

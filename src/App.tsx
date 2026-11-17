@@ -3,6 +3,8 @@ import type { FormEvent } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { AuthScreen } from './components/AuthScreen'
 import { ChallengeForm } from './components/ChallengeForm'
+import { DisplayModeControl } from './components/DisplayModeControl'
+import type { DisplayMode } from './components/DisplayModeControl'
 import { getSupabaseClient } from './lib/supabase'
 import type {
   AnswerFeedback,
@@ -17,6 +19,14 @@ import './App.css'
 const isSupabaseConfigured = Boolean(
   import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
 )
+const displayModeStorageKey = 'stem-challenge-hub-display-mode'
+
+function getSavedDisplayMode(): DisplayMode {
+  const savedMode = window.localStorage.getItem(displayModeStorageKey)
+  return savedMode === 'color-blind' || savedMode === 'dyslexia-friendly'
+    ? savedMode
+    : 'default'
+}
 
 function App() {
   const supabase = useMemo(
@@ -24,6 +34,7 @@ function App() {
     [],
   )
   const [user, setUser] = useState<User | null>(null)
+  const [displayMode, setDisplayMode] = useState<DisplayMode>(getSavedDisplayMode)
   const [passwordRecovery, setPasswordRecovery] = useState(() =>
     window.location.hash.includes('type=recovery'),
   )
@@ -51,6 +62,11 @@ function App() {
   const [answerFeedback, setAnswerFeedback] = useState<
     Record<string, AnswerFeedback>
   >({})
+
+  useEffect(() => {
+    document.documentElement.dataset.displayMode = displayMode
+    window.localStorage.setItem(displayModeStorageKey, displayMode)
+  }, [displayMode])
 
   useEffect(() => {
     if (!supabase) {
@@ -333,14 +349,14 @@ function App() {
     const feedback: AnswerFeedback =
       challenge.answer_type === 'multiple_choice'
         ? {
-            kind: isCorrect ? 'success' : 'error',
+            kind: isCorrect ? 'success' : 'retry',
             message: isCorrect
-              ? 'Correct! Great work.'
-              : 'Not quite. Try another answer.',
+              ? 'Correct! Your curiosity paid off.'
+              : 'Good try. Revisit the clues and give it another go.',
           }
         : {
             kind: 'success',
-            message: 'Your answer is saved for your teacher to review.',
+            message: 'Nice work sharing your thinking. Your teacher will review it.',
           }
     setAnswerFeedback((current) => ({
       ...current,
@@ -504,6 +520,8 @@ function App() {
         supabase={supabase!}
         error={pageError}
         onError={setPageError}
+        displayMode={displayMode}
+        onDisplayModeChange={setDisplayMode}
         onRecoveryComplete={() => setPasswordRecovery(false)}
         recovery
       />
@@ -520,6 +538,8 @@ function App() {
         supabase={supabase!}
         error={pageError}
         onError={setPageError}
+        displayMode={displayMode}
+        onDisplayModeChange={setDisplayMode}
       />
     )
   }
@@ -582,6 +602,10 @@ function App() {
           <p className="workspace-role">
             {isTeacher ? 'TEACHER WORKSPACE' : 'STUDENT WORKSPACE'}
           </p>
+          <DisplayModeControl
+            value={displayMode}
+            onChange={setDisplayMode}
+          />
           <nav className="workspace-nav" aria-label="Workspace navigation">
             <button
               aria-current={isTeacher && teacherView === 'challenges' ? 'page' : undefined}
@@ -703,11 +727,11 @@ function App() {
                       ? 'A WORKSHOP FOR CURIOUS MINDS'
                       : 'YOUR LEARNING SPACE'}
                   </p>
-                  <h1>{isTeacher ? 'Challenge hub' : 'My challenges'}</h1>
+                  <h1>{isTeacher ? 'Challenge hub' : 'Explore. Create. Discover.'}</h1>
                   <p className="page-subtitle">
                     {isTeacher
                       ? 'Small experiments. Real discoveries. See what your class can do.'
-                      : `Pick a challenge from ${selectedClass.name} and show what you know.`}
+                      : 'Pick one challenge and give your curiosity room to grow.'}
                   </p>
                 </div>
                 {isTeacher ? (
@@ -741,26 +765,43 @@ function App() {
                 ) : null}
               </div>
 
-              <section className="class-greeting" aria-label="Class overview">
+              <section
+                className={`class-greeting${isTeacher ? '' : ' class-greeting-student'}`}
+                aria-label={isTeacher ? 'Class overview' : 'Your learning journey'}
+              >
                 <div>
                   <p className="class-greeting-label">
-                    {selectedClass.name.toUpperCase()}
+                    {isTeacher
+                      ? selectedClass.name.toUpperCase()
+                      : `YOUR LEARNING ADVENTURE · ${selectedClass.name.toUpperCase()}`}
                   </p>
                   <h2>
                     {isTeacher
                       ? 'A good day to ask “what if?”'
-                      : 'Ready to explore something new?'}
+                      : 'Your next big discovery starts here!'}
                   </h2>
                   <p>
                     {isTeacher
                       ? `${currentDashboard?.members.length ?? 0} curious minds · ${currentDashboard?.challenges.filter((challenge) => challenge.is_published).length ?? 0} active challenges · Endless possibilities`
-                      : `${currentDashboard?.challenges.filter((challenge) => challenge.is_published).length ?? 0} challenges waiting for you`}
+                      : currentDashboard
+                        ? 'Pick a challenge that sparks your curiosity. Every attempt helps you grow.'
+                        : 'Getting your next discoveries ready...'}
                   </p>
                 </div>
-                <div className="class-greeting-orbit" aria-hidden="true">
-                  <span>◎</span>
-                  <i />
-                </div>
+                {isTeacher ? (
+                  <div className="class-greeting-orbit" aria-hidden="true">
+                    <span>◎</span>
+                    <i />
+                  </div>
+                ) : (
+                  <div className="student-greeting-count" aria-label={`${currentDashboard?.challenges.filter((challenge) => challenge.is_published).length ?? 0} challenges to explore`}>
+                    <span aria-hidden="true">✦</span>
+                    <strong>
+                      {currentDashboard?.challenges.filter((challenge) => challenge.is_published).length ?? '…'}
+                    </strong>
+                    <small>challenges<br />to explore</small>
+                  </div>
+                )}
               </section>
 
               {isTeacher ? (
@@ -1140,12 +1181,12 @@ function StudentDashboard({
   if (!dashboard) return <LoadingInline />
   if (!challenges.length) {
     return (
-      <div className="empty-state">
+      <div className="empty-state student-empty-state">
         <span className="empty-illustration" aria-hidden="true">
           ✳
         </span>
-        <h2>No challenges just yet</h2>
-        <p>Your teacher will add a challenge here when it’s ready.</p>
+        <h2>Your discovery space is getting ready</h2>
+        <p>Your teacher will add a challenge soon. Your next big idea is just around the corner!</p>
       </div>
     )
   }
@@ -1180,13 +1221,18 @@ function StudentDashboard({
             }).length
             return (
               <button
+                aria-label={`${tab === 'all' ? 'All challenges' : tab === 'todo' ? 'Ready to explore' : 'Answers shared'}: ${count}`}
                 aria-selected={filter === tab}
                 className={filter === tab ? 'is-selected' : ''}
                 key={tab}
                 onClick={() => setFilter(tab)}
                 role="tab"
               >
-                {tab === 'all' ? 'All' : tab === 'todo' ? 'To do' : 'Done'} (
+                {tab === 'all'
+                  ? 'All challenges'
+                  : tab === 'todo'
+                    ? 'Ready to explore'
+                    : 'Answers shared'} (
                 {count})
               </button>
             )
@@ -1224,6 +1270,10 @@ function StudentDashboard({
             <div className="student-challenge-top">
               <span className="challenge-number">
                 CHALLENGE {String(index + 1).padStart(2, '0')}
+              </span>
+              <span className={`challenge-journey-status${submission ? ' is-shared' : ''}`}>
+                <span aria-hidden="true">{submission ? '✓' : '✦'}</span>
+                {submission ? 'Answer shared' : 'Ready when you are'}
               </span>
             </div>
             <h2>{challenge.title}</h2>
@@ -1284,7 +1334,7 @@ function StudentDashboard({
                   <span>{submission.answer}</span>
                   {submission.is_correct === null ? (
                     <small>
-                      Awaiting teacher evaluation. Check back later for feedback.
+                      Thanks for sharing your thinking. Your teacher will review it.
                     </small>
                   ) : (
                     <div
@@ -1297,15 +1347,15 @@ function StudentDashboard({
                             ? 'Correct!'
                             : 'Your teacher marked this correct.'
                           : challenge.answer_type === 'multiple_choice'
-                            ? 'Not quite. Try another answer.'
+                            ? 'Good try! Revisit the clues, then try another answer.'
                             : 'Your teacher reviewed this answer.'}
                       </strong>
                       <span>
                         {submission.is_correct
                           ? 'Great work! Keep up your curiosity.'
                           : challenge.answer_type === 'multiple_choice'
-                            ? 'Choose a different answer and submit again.'
-                            : 'Review your thinking with your teacher.'}
+                            ? 'You are learning with every attempt. Use what you noticed and try again.'
+                            : 'Your teacher has feedback to help your thinking grow.'}
                       </span>
                     </div>
                   )}
@@ -1319,26 +1369,47 @@ function StudentDashboard({
         <aside className="student-discoveries">
           <div className="discoveries-heading">
             <span aria-hidden="true">✦</span>
-            <h2>Your discoveries</h2>
+            <h2>Your journey so far</h2>
           </div>
-          <p>Every great idea starts with a question.</p>
+          <p>Progress is made one curious question at a time.</p>
+          <div
+            aria-label={`${submittedCount} of ${challenges.length} challenges explored`}
+            aria-valuemax={challenges.length}
+            aria-valuemin={0}
+            aria-valuenow={submittedCount}
+            className="discovery-progress"
+            role="progressbar"
+          >
+            <span
+              style={{
+                width: `${challenges.length ? (submittedCount / challenges.length) * 100 : 0}%`,
+              }}
+            />
+          </div>
+          <p className="discovery-progress-label">
+            {submittedCount} of {challenges.length} challenges explored
+          </p>
           <div className="discovery-stat">
-            <span>Challenges completed</span>
+            <span>Answers shared</span>
             <strong>
               {submittedCount}
               <small> / {challenges.length}</small>
             </strong>
           </div>
-          <div className="discovery-stat">
-            <span>Awaiting teacher review</span>
-            <strong>{pendingReviewCount}</strong>
-          </div>
+          {pendingReviewCount ? (
+            <div className="discovery-stat">
+              <span>With your teacher</span>
+              <strong>{pendingReviewCount}</strong>
+            </div>
+          ) : null}
           <div className="discovery-note">
             <span aria-hidden="true">✧</span>
             <p>
-              {pendingReviewCount
-                ? 'Your teacher is reviewing your work. Keep exploring while you wait!'
-                : 'Try a challenge and share how you figured it out.'}
+              {submittedCount === challenges.length
+                ? 'Every answer is a step forward. You can revisit any challenge or celebrate what you have learned!'
+                : pendingReviewCount
+                  ? 'Your teacher is looking at your thinking. Take your time and explore another challenge whenever you are ready.'
+                  : 'There is no rush. Pick one challenge and give it your best thinking.'}
             </p>
           </div>
         </aside>

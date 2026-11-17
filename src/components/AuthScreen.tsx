@@ -3,17 +3,25 @@ import type { FormEvent } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { AuthIllustration } from './AuthIllustration'
 import type { UserRole } from '../lib/types'
+import { DisplayModeControl } from './DisplayModeControl'
+import type { DisplayMode } from './DisplayModeControl'
+
+const rememberedEmailStorageKey = 'stem-challenge-hub-remembered-email'
 
 export function AuthScreen({
   supabase,
   error,
   onError,
+  displayMode,
+  onDisplayModeChange,
   recovery = false,
   onRecoveryComplete,
 }: {
   supabase: SupabaseClient
   error: string
   onError: (message: string) => void
+  displayMode: DisplayMode
+  onDisplayModeChange: (mode: DisplayMode) => void
   recovery?: boolean
   onRecoveryComplete?: () => void
 }) {
@@ -21,6 +29,12 @@ export function AuthScreen({
   const [role, setRole] = useState<UserRole>('teacher')
   const [pending, setPending] = useState(false)
   const [notice, setNotice] = useState('')
+  const [rememberedEmail] = useState(
+    () => window.localStorage.getItem(rememberedEmailStorageKey) ?? '',
+  )
+  const [rememberEmail, setRememberEmail] = useState(
+    () => rememberedEmail !== '',
+  )
   const formRef = useRef<HTMLFormElement>(null)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -54,6 +68,11 @@ export function AuthScreen({
           password,
         })
         if (signInError) throw signInError
+        if (rememberEmail) {
+          window.localStorage.setItem(rememberedEmailStorageKey, email)
+        } else {
+          window.localStorage.removeItem(rememberedEmailStorageKey)
+        }
       } else {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -150,7 +169,13 @@ export function AuthScreen({
           </svg>
           <span>STEM Challenge Hub</span>
         </a>
-        <span className="auth-header-status">A curious place to learn</span>
+        <div className="auth-header-tools">
+          <span className="auth-header-status">A curious place to learn</span>
+          <DisplayModeControl
+            value={displayMode}
+            onChange={onDisplayModeChange}
+          />
+        </div>
       </header>
 
       <div className="auth-content">
@@ -252,6 +277,7 @@ export function AuthScreen({
                     Email
                     <input
                       autoComplete="email"
+                      defaultValue={rememberedEmail}
                       name="email"
                       placeholder="you@example.com"
                       required
@@ -269,14 +295,35 @@ export function AuthScreen({
                     required
                   />
                   {mode === 'signin' ? (
-                    <button
-                      className="auth-forgot"
-                      disabled={pending}
-                      onClick={() => void handlePasswordReset()}
-                      type="button"
-                    >
-                      Forgot password?
-                    </button>
+                    <>
+                      <div className="auth-remember">
+                        <label>
+                          <input
+                            checked={rememberEmail}
+                            onChange={(event) => {
+                              const shouldRemember = event.target.checked
+                              setRememberEmail(shouldRemember)
+                              if (!shouldRemember) {
+                                window.localStorage.removeItem(
+                                  rememberedEmailStorageKey,
+                                )
+                              }
+                            }}
+                            type="checkbox"
+                          />
+                          Remember my email on this device
+                        </label>
+                        <span>Your password is never saved.</span>
+                      </div>
+                      <button
+                        className="auth-forgot"
+                        disabled={pending}
+                        onClick={() => void handlePasswordReset()}
+                        type="button"
+                      >
+                        Forgot password?
+                      </button>
+                    </>
                   ) : null}
                 </>
               )}
