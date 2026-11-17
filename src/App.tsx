@@ -20,12 +20,102 @@ const isSupabaseConfigured = Boolean(
   import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
 )
 const displayModeStorageKey = 'stem-challenge-hub-display-mode'
+const readAloudStorageKey = 'stem-challenge-hub-read-aloud'
 
 function getSavedDisplayMode(): DisplayMode {
   const savedMode = window.localStorage.getItem(displayModeStorageKey)
   return savedMode === 'color-blind' || savedMode === 'dyslexia-friendly'
     ? savedMode
     : 'default'
+}
+
+function getSavedReadAloudPreference() {
+  return window.localStorage.getItem(readAloudStorageKey) === 'true'
+}
+
+function getFocusedControlAnnouncement(target: HTMLElement) {
+  const labelledBy = target
+    .getAttribute('aria-labelledby')
+    ?.split(/\s+/)
+    .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
+    .filter(Boolean)
+    .join(' ')
+  const labels =
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLSelectElement ||
+    target instanceof HTMLTextAreaElement
+      ? Array.from(target.labels ?? [])
+          .map((label) => label.textContent?.trim() ?? '')
+          .filter(Boolean)
+          .join(' ')
+      : ''
+  const content = target.cloneNode(true) as HTMLElement
+  content.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove())
+  const name =
+    target.getAttribute('aria-label') ||
+    labelledBy ||
+    labels ||
+    content.textContent ||
+    target.innerText ||
+    ''
+  const normalizedName = name.replace(/\s+/g, ' ').trim().slice(0, 140)
+  if (!normalizedName) return ''
+
+  const tagName = target.tagName.toLowerCase()
+  const type = target instanceof HTMLInputElement ? target.type : ''
+  const role =
+    target.getAttribute('role') ||
+    (tagName === 'a'
+      ? 'link'
+      : tagName === 'button' ||
+          (tagName === 'input' && ['button', 'submit'].includes(type))
+        ? 'button'
+        : tagName === 'select'
+          ? 'list'
+          : ['input', 'textarea'].includes(tagName)
+            ? type === 'checkbox'
+              ? 'checkbox'
+              : type === 'radio'
+                ? 'radio button'
+                : 'text field'
+            : tagName === 'summary'
+              ? 'disclosure'
+              : '')
+  const details = [normalizedName, role]
+
+  if (
+    (target instanceof HTMLInputElement &&
+      ['checkbox', 'radio'].includes(target.type)) ||
+    target.getAttribute('role') === 'checkbox'
+  ) {
+    const checked =
+      target instanceof HTMLInputElement
+        ? target.checked
+        : target.getAttribute('aria-checked') === 'true'
+    details.push(checked ? 'checked' : 'not checked')
+  }
+  if (target instanceof HTMLSelectElement) {
+    details.push(target.selectedOptions[0]?.textContent?.trim() ?? '')
+  }
+  if (target.getAttribute('aria-pressed')) {
+    details.push(
+      target.getAttribute('aria-pressed') === 'true'
+        ? 'pressed'
+        : 'not pressed',
+    )
+  }
+  if (target.getAttribute('aria-expanded')) {
+    details.push(
+      target.getAttribute('aria-expanded') === 'true'
+        ? 'expanded'
+        : 'collapsed',
+    )
+  }
+  if (target.getAttribute('aria-current') === 'page') {
+    details.push('current page')
+  }
+
+  return details.filter(Boolean).join(', ')
 }
 
 function App() {
@@ -35,6 +125,9 @@ function App() {
   )
   const [user, setUser] = useState<User | null>(null)
   const [displayMode, setDisplayMode] = useState<DisplayMode>(getSavedDisplayMode)
+  const [readAloudEnabled, setReadAloudEnabled] = useState(
+    getSavedReadAloudPreference,
+  )
   const [passwordRecovery, setPasswordRecovery] = useState(() =>
     window.location.hash.includes('type=recovery'),
   )
@@ -67,6 +160,142 @@ function App() {
     document.documentElement.dataset.displayMode = displayMode
     window.localStorage.setItem(displayModeStorageKey, displayMode)
   }, [displayMode])
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      readAloudStorageKey,
+      String(readAloudEnabled),
+    )
+    if (!('speechSynthesis' in window)) return
+
+    if (!readAloudEnabled) {
+      window.speechSynthesis.cancel()
+      return
+    }
+
+    function speak(text: string) {
+      window.speechSynthesis.cancel()
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = document.documentElement.lang || navigator.language
+      utterance.rate = 0.9
+      window.speechSynthesis.speak(utterance)
+    }
+
+    let lastFocusedTarget: HTMLElement | null = null
+    let lastAnnouncement = ''
+    let lastHoveredTarget: HTMLElement | null = null
+    let hoverTimer = 0
+
+    function announce(target: HTMLElement) {
+      const announcement = getFocusedControlAnnouncement(target)
+      if (
+        !announcement ||
+        (target === lastFocusedTarget && announcement === lastAnnouncement)
+      ) {
+        return
+      }
+      lastFocusedTarget = target
+      lastAnnouncement = announcement
+      speak(announcement)
+    }
+
+    speak(
+      'Read aloud is on. Move through buttons, links, and form controls to hear their names and states.',
+    )
+
+    function handleFocus(event: FocusEvent) {
+      if (!(event.target instanceof HTMLElement)) return
+      announce(event.target)
+    }
+
+    function handleChange(event: Event) {
+      if (
+        !(event.target instanceof HTMLSelectElement) &&
+        !(
+          event.target instanceof HTMLInputElement &&
+          ['checkbox', 'radio'].includes(event.target.type)
+        )
+      ) {
+        return
+      }
+      announce(event.target)
+    }
+
+    function handlePointerOver(event: PointerEvent) {
+      if (
+        event.pointerType === 'touch' ||
+        !(event.target instanceof HTMLElement)
+      ) {
+        return
+      }
+
+      const readable = event.target.closest<HTMLElement>(
+        'h1, h2, h3, p, label, li, blockquote, .challenge-prompt, .student-prompt',
+      )
+      if (
+        !readable ||
+        readable.closest('.display-mode-control, [aria-hidden="true"]') ||
+        readable === lastHoveredTarget
+      ) {
+        return
+      }
+
+      window.clearTimeout(hoverTimer)
+      hoverTimer = window.setTimeout(() => {
+        const content = readable.cloneNode(true) as HTMLElement
+        content.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove())
+        const text = (content.innerText || content.textContent || '')
+          .replace(/\s+/g, ' ')
+          .trim()
+        if (!text) return
+        lastHoveredTarget = readable
+        lastFocusedTarget = null
+        speak(text.slice(0, 320))
+      }, 450)
+    }
+
+    function handlePointerOut() {
+      window.clearTimeout(hoverTimer)
+    }
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (
+          mutation.target instanceof HTMLElement &&
+          mutation.target === document.activeElement
+        ) {
+          announce(mutation.target)
+        }
+      }
+    })
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: [
+        'aria-current',
+        'aria-expanded',
+        'aria-label',
+        'aria-labelledby',
+        'aria-pressed',
+      ],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    })
+
+    document.addEventListener('focusin', handleFocus)
+    document.addEventListener('change', handleChange)
+    document.addEventListener('pointerover', handlePointerOver)
+    document.addEventListener('pointerout', handlePointerOut)
+    return () => {
+      document.removeEventListener('focusin', handleFocus)
+      document.removeEventListener('change', handleChange)
+      document.removeEventListener('pointerover', handlePointerOver)
+      document.removeEventListener('pointerout', handlePointerOut)
+      window.clearTimeout(hoverTimer)
+      observer.disconnect()
+      window.speechSynthesis.cancel()
+    }
+  }, [readAloudEnabled])
 
   useEffect(() => {
     if (!supabase) {
@@ -522,6 +751,8 @@ function App() {
         onError={setPageError}
         displayMode={displayMode}
         onDisplayModeChange={setDisplayMode}
+        readAloudEnabled={readAloudEnabled}
+        onReadAloudChange={setReadAloudEnabled}
         onRecoveryComplete={() => setPasswordRecovery(false)}
         recovery
       />
@@ -540,6 +771,8 @@ function App() {
         onError={setPageError}
         displayMode={displayMode}
         onDisplayModeChange={setDisplayMode}
+        readAloudEnabled={readAloudEnabled}
+        onReadAloudChange={setReadAloudEnabled}
       />
     )
   }
@@ -605,6 +838,8 @@ function App() {
           <DisplayModeControl
             value={displayMode}
             onChange={setDisplayMode}
+            readAloudEnabled={readAloudEnabled}
+            onReadAloudChange={setReadAloudEnabled}
           />
           <nav className="workspace-nav" aria-label="Workspace navigation">
             <button

@@ -14,6 +14,8 @@ export function AuthScreen({
   onError,
   displayMode,
   onDisplayModeChange,
+  readAloudEnabled,
+  onReadAloudChange,
   recovery = false,
   onRecoveryComplete,
 }: {
@@ -22,6 +24,8 @@ export function AuthScreen({
   onError: (message: string) => void
   displayMode: DisplayMode
   onDisplayModeChange: (mode: DisplayMode) => void
+  readAloudEnabled: boolean
+  onReadAloudChange: (enabled: boolean) => void
   recovery?: boolean
   onRecoveryComplete?: () => void
 }) {
@@ -174,6 +178,8 @@ export function AuthScreen({
           <DisplayModeControl
             value={displayMode}
             onChange={onDisplayModeChange}
+            readAloudEnabled={readAloudEnabled}
+            onReadAloudChange={onReadAloudChange}
           />
         </div>
       </header>
