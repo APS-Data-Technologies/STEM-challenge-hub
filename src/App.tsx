@@ -3,12 +3,15 @@ import type { FormEvent } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { AuthScreen } from './components/AuthScreen'
 import { ChallengeForm } from './components/ChallengeForm'
+import { DailyJourney } from './components/DailyJourney'
 import { DisplayModeControl } from './components/DisplayModeControl'
 import type { DisplayMode } from './components/DisplayModeControl'
 import { getSupabaseClient } from './lib/supabase'
 import type {
   AnswerFeedback,
   Challenge,
+  ClassGradeBand,
+  ClassMessageType,
   ClassRecord,
   DashboardData,
   Profile,
@@ -21,6 +24,44 @@ const isSupabaseConfigured = Boolean(
 )
 const displayModeStorageKey = 'stem-challenge-hub-display-mode'
 const readAloudStorageKey = 'stem-challenge-hub-read-aloud'
+const classOrderStoragePrefix = 'stem-challenge-hub-class-order:'
+const classMessageTypes: ClassMessageType[] = [
+  'Announcement',
+  'Description',
+  'Rules',
+  'Guidelines',
+]
+function isClassMessageType(value: string): value is ClassMessageType {
+  return classMessageTypes.some((type) => type === value)
+}
+const gradeNames: Record<string, string> = {
+  k: 'Kindergarten',
+  kindergarten: 'Kindergarten',
+  '1': 'One',
+  one: 'One',
+  '2': 'Two',
+  two: 'Two',
+  '3': 'Three',
+  three: 'Three',
+  '4': 'Four',
+  four: 'Four',
+  '5': 'Five',
+  five: 'Five',
+  '6': 'Six',
+  six: 'Six',
+  '7': 'Seven',
+  seven: 'Seven',
+  '8': 'Eight',
+  eight: 'Eight',
+  '9': 'Nine',
+  nine: 'Nine',
+  '10': 'Ten',
+  ten: 'Ten',
+  '11': 'Eleven',
+  eleven: 'Eleven',
+  '12': 'Twelve',
+  twelve: 'Twelve',
+}
 
 function getSavedDisplayMode(): DisplayMode {
   const savedMode = window.localStorage.getItem(displayModeStorageKey)
@@ -31,6 +72,135 @@ function getSavedDisplayMode(): DisplayMode {
 
 function getSavedReadAloudPreference() {
   return window.localStorage.getItem(readAloudStorageKey) === 'true'
+}
+
+function getGradeLabel(grade: string) {
+  if (grade === 'Kindergarten') return grade
+  const number = Number(grade)
+  const suffix =
+    number % 100 >= 11 && number % 100 <= 13
+      ? 'th'
+      : number % 10 === 1
+        ? 'st'
+        : number % 10 === 2
+          ? 'nd'
+          : number % 10 === 3
+            ? 'rd'
+            : 'th'
+  return `${number}${suffix}`
+}
+
+function getTeacherHubTitle(className?: string) {
+  if (!className) return 'Challenge Hub'
+  const grade = className.match(
+    /\bgrade\s+(kindergarten|k|1[0-2]|[1-9](?:st|nd|rd|th)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/i,
+  )?.[1]
+  const gradeName = grade
+    ? gradeNames[grade.toLowerCase().replace(/(?:st|nd|rd|th)$/, '')]
+    : null
+  return gradeName
+    ? `Grade ${gradeName} Challenge Hub`
+    : `${className} Challenge Hub`
+}
+
+type TeacherGradeBand = ClassGradeBand
+
+const teacherGradeBands: {
+  id: TeacherGradeBand
+  title: string
+  description: string
+  grades: string[]
+}[] = [
+  {
+    id: 'K-5',
+    title: 'Kindergarten–Grade 5',
+    description: 'Build welcoming foundations and explore core STEM ideas.',
+    grades: ['Kindergarten', '1', '2', '3', '4', '5'],
+  },
+  {
+    id: '6-8',
+    title: 'Grades 6–8',
+    description: 'Create hands-on challenges for middle school learners.',
+    grades: ['6', '7', '8'],
+  },
+  {
+    id: '9-12',
+    title: 'Grades 9–12',
+    description: 'Design deeper investigations for high school students.',
+    grades: ['9', '10', '11', '12'],
+  },
+]
+
+function getClassGradeBand(className: string): TeacherGradeBand | null {
+  const grade = className.match(
+    /\b(?:grade\s+)?(kindergarten|k|1[0-2]|[1-9](?:st|nd|rd|th)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/i,
+  )?.[1]
+  if (!grade) return null
+  const normalized = grade.toLowerCase().replace(/(?:st|nd|rd|th)$/, '')
+  if (normalized === 'k' || normalized === 'kindergarten') return 'K-5'
+  const numericGrade =
+    Number(normalized) ||
+    Number(
+      Object.entries(gradeNames).find(
+        ([, name]) => name.toLowerCase() === normalized,
+      )?.[0],
+    )
+  if (numericGrade <= 5) return 'K-5'
+  if (numericGrade <= 8) return '6-8'
+  return '9-12'
+}
+
+function getBaseClassName(className: string) {
+  const baseName = className
+    .replace(/\s*(?:[-–]\s*)?Section\s+[A-C]$/i, '')
+    .trim()
+  const match = baseName.match(
+    /^(?:grade\s+)?(kindergarten|k|1[0-2]|[1-9](?:st|nd|rd|th)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(math|science|technology|engineering)$/i,
+  )
+  if (!match) return baseName.toLocaleLowerCase()
+
+  const grade = match[1].toLowerCase().replace(/(?:st|nd|rd|th)$/, '')
+  const normalizedGrade =
+    grade === 'kindergarten' || grade === 'k'
+      ? 'k'
+      : String(
+          Number(grade) ||
+            Object.entries(gradeNames).find(
+              ([, name]) => name.toLowerCase() === grade,
+            )?.[0],
+        )
+  return `${normalizedGrade} ${match[2].toLocaleLowerCase()}`
+}
+
+function getClassSection(className: string) {
+  return className.match(/(?:[-–]\s*)?Section\s+([A-C])$/i)?.[1]?.toUpperCase()
+}
+
+function orderClasses(classRecords: ClassRecord[], teacherId: string) {
+  const savedOrder = window.localStorage.getItem(
+    `${classOrderStoragePrefix}${teacherId}`,
+  )
+  if (!savedOrder) return classRecords
+
+  try {
+    const orderedIds: unknown = JSON.parse(savedOrder)
+    if (
+      !Array.isArray(orderedIds) ||
+      !orderedIds.every((id) => typeof id === 'string')
+    ) {
+      return classRecords
+    }
+    const orderIndex = new Map<string, number>(
+      orderedIds.map((id: string, index: number) => [id, index]),
+    )
+    return [...classRecords].sort(
+      (left, right) =>
+        (orderIndex.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
+        (orderIndex.get(right.id) ?? Number.MAX_SAFE_INTEGER),
+    )
+  } catch {
+    return classRecords
+  }
 }
 
 function getFocusedControlAnnouncement(target: HTMLElement) {
@@ -135,11 +305,14 @@ function App() {
   const [profileLoading, setProfileLoading] = useState(false)
   const [classes, setClasses] = useState<ClassRecord[]>([])
   const [selectedClassId, setSelectedClassId] = useState('')
+  const [teacherGradeBand, setTeacherGradeBand] =
+    useState<TeacherGradeBand | null>(null)
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [showClassForm, setShowClassForm] = useState(false)
+  const [showClassMessageForm, setShowClassMessageForm] = useState(false)
   const [showClassManagement, setShowClassManagement] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [viewingSubmission, setViewingSubmission] =
@@ -317,7 +490,10 @@ function App() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       const currentUser = session?.user ?? null
       if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
-      if (event === 'SIGNED_OUT') setPasswordRecovery(false)
+      if (event === 'SIGNED_OUT') {
+        setPasswordRecovery(false)
+        setTeacherGradeBand(null)
+      }
       setUser(currentUser)
       setProfileLoading(Boolean(currentUser))
       setProfile(null)
@@ -369,7 +545,9 @@ function App() {
         if (profile.role === 'teacher') {
           const { data, error } = await supabase
             .from('classes')
-            .select('id, name, join_code, created_at')
+            .select(
+              'id, name, join_code, created_at, grade_band, message_type, message_heading, message_content',
+            )
             .eq('teacher_id', user.id)
             .order('created_at', { ascending: true })
           if (error) throw error
@@ -386,7 +564,9 @@ function App() {
           } else {
             const { data, error } = await supabase
               .from('classes')
-              .select('id, name, join_code, created_at')
+              .select(
+                'id, name, join_code, created_at, grade_band, message_type, message_heading, message_content',
+              )
               .in('id', classIds)
               .order('created_at', { ascending: true })
             if (error) throw error
@@ -395,11 +575,23 @@ function App() {
         }
 
         if (!active) return
-        setClasses(nextClasses)
+        const orderedClasses =
+          profile.role === 'teacher'
+            ? orderClasses(nextClasses, user.id)
+            : nextClasses
+        setClasses(orderedClasses)
+        const availableClasses =
+          profile.role === 'teacher' && teacherGradeBand
+            ? orderedClasses.filter(
+                (classRecord) =>
+                  (classRecord.grade_band ??
+                    getClassGradeBand(classRecord.name)) === teacherGradeBand,
+              )
+            : orderedClasses
         setSelectedClassId((current) =>
-          nextClasses.some((classRecord) => classRecord.id === current)
+          availableClasses.some((classRecord) => classRecord.id === current)
             ? current
-            : (nextClasses[0]?.id ?? ''),
+            : (availableClasses[0]?.id ?? ''),
         )
       } catch (error) {
         if (active) setPageError(errorMessage(error))
@@ -409,7 +601,7 @@ function App() {
     return () => {
       active = false
     }
-  }, [supabase, user, profile, refreshKey])
+  }, [supabase, user, profile, refreshKey, teacherGradeBand])
 
   useEffect(() => {
     if (!supabase || !user || !profile || !selectedClassId) {
@@ -422,7 +614,7 @@ function App() {
         const { data: challengeRows, error: challengeError } = await supabase
           .from('challenges')
           .select(
-            'id, class_id, title, prompt, subject, grade_band, answer_type, choices, is_published, created_at',
+            'id, class_id, title, prompt, subject, grade_band, answer_type, choices, is_published, program_day, level, created_at',
           )
           .eq('class_id', selectedClassId)
           .order('created_at', { ascending: false })
@@ -482,7 +674,6 @@ function App() {
             ),
             submissions,
           })
-          setPageError('')
         }
       } catch (error) {
         if (active) setPageError(errorMessage(error))
@@ -494,6 +685,19 @@ function App() {
     }
   }, [supabase, user, profile, selectedClassId, refreshKey])
 
+  useEffect(() => {
+    if (!user || !profile) return
+
+    function refreshOnReturn() {
+      if (document.visibilityState === 'visible') {
+        setRefreshKey((key) => key + 1)
+      }
+    }
+
+    document.addEventListener('visibilitychange', refreshOnReturn)
+    return () => document.removeEventListener('visibilitychange', refreshOnReturn)
+  }, [user, profile])
+
   async function handleSignOut() {
     if (!supabase) return
     const { error } = await supabase.auth.signOut()
@@ -504,28 +708,170 @@ function App() {
     event.preventDefault()
     if (!supabase || !user) return
     const formData = new FormData(event.currentTarget)
-    const name = String(formData.get('className') ?? '').trim()
-    if (!name) return
+    const grade = String(formData.get('grade') ?? '')
+    const subject = String(formData.get('subject') ?? '')
+    const section = String(formData.get('section') ?? '')
+    const baseName = `${grade === 'Kindergarten' ? grade : `Grade ${getGradeLabel(grade)}`} ${subject}`.trim()
+    const name = section ? `${baseName} - Section ${section}` : baseName
+    if (!name || !teacherGradeBand) return
 
-    const { error } = await supabase.from('classes').insert({ name })
+    const existingForCourse = classes.filter(
+      (classRecord) => getBaseClassName(classRecord.name) === getBaseClassName(baseName),
+    )
+    if (
+      section &&
+      existingForCourse.some(
+        (classRecord) =>
+          getClassSection(classRecord.name) === section.toUpperCase(),
+      )
+    ) {
+      setPageError(
+        `Section ${section} already exists for ${baseName}. Choose another section.`,
+      )
+      return
+    }
+    if (!section && existingForCourse.length > 0) {
+      setPageError(
+        `${baseName} already exists. Choose Section A, B, or C to create another class.`,
+      )
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('classes')
+      .insert({ name, grade_band: teacherGradeBand })
+      .select('id')
+      .single()
     if (error) {
       setPageError(error.message)
       return
     }
     setShowClassForm(false)
+    setSelectedClassId(data.id)
+    setTeacherView('challenges')
+    setPageError('')
     setRefreshKey((key) => key + 1)
+  }
+
+  async function saveClassMessage(
+    messageType: ClassMessageType,
+    heading: string,
+    content: string,
+  ) {
+    if (!supabase || !selectedClass) return false
+    if (!heading.trim() || !content.trim()) {
+      setPageError('Enter both a heading and a message.')
+      return false
+    }
+    const message = {
+      message_type: messageType,
+      message_heading: heading.trim(),
+      message_content: content.trim(),
+    }
+    try {
+      const { error } = await supabase
+        .from('classes')
+        .update(message)
+        .eq('id', selectedClass.id)
+        .select('id')
+        .single()
+      if (error) throw error
+    } catch (error) {
+      setPageError(errorMessage(error))
+      return false
+    }
+    setClasses((current) =>
+      current.map((classRecord) =>
+        classRecord.id === selectedClass.id
+          ? { ...classRecord, ...message }
+          : classRecord,
+      ),
+    )
+    setPageError('')
+    setShowClassMessageForm(false)
+    return true
+  }
+
+  async function clearClassMessage() {
+    if (!supabase || !selectedClass) return
+    try {
+      const { error } = await supabase
+        .from('classes')
+        .update({
+          message_type: null,
+          message_heading: null,
+          message_content: null,
+        })
+        .eq('id', selectedClass.id)
+        .select('id')
+        .single()
+      if (error) throw error
+    } catch (error) {
+      setPageError(errorMessage(error))
+      return
+    }
+    setClasses((current) =>
+      current.map((classRecord) =>
+        classRecord.id === selectedClass.id
+          ? {
+              ...classRecord,
+              message_type: null,
+              message_heading: null,
+              message_content: null,
+            }
+          : classRecord,
+      ),
+    )
+    setPageError('')
+    setShowClassMessageForm(false)
+  }
+
+  function moveClass(classId: string, direction: -1 | 1) {
+    if (!user || profile?.role !== 'teacher') return
+    const bandClassIndexes = classes.flatMap((classRecord, index) =>
+      (classRecord.grade_band ?? getClassGradeBand(classRecord.name)) ===
+      teacherGradeBand
+        ? [index]
+        : [],
+    )
+    const bandIndex = bandClassIndexes.findIndex(
+      (index) => classes[index].id === classId,
+    )
+    const nextBandIndex = bandIndex + direction
+    if (bandIndex < 0 || nextBandIndex < 0 || nextBandIndex >= bandClassIndexes.length) {
+      return
+    }
+    const currentIndex = bandClassIndexes[bandIndex]
+    const nextIndex = bandClassIndexes[nextBandIndex]
+    const nextClasses = [...classes]
+    ;[nextClasses[currentIndex], nextClasses[nextIndex]] = [
+      nextClasses[nextIndex],
+      nextClasses[currentIndex],
+    ]
+    setClasses(nextClasses)
+    window.localStorage.setItem(
+      `${classOrderStoragePrefix}${user.id}`,
+      JSON.stringify(nextClasses.map((classRecord) => classRecord.id)),
+    )
   }
 
   async function joinClass(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!supabase) return
-    const formData = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const formData = new FormData(form)
     const code = String(formData.get('joinCode') ?? '').trim()
-    const { error } = await supabase.rpc('join_class', { code })
+    const { data: classId, error } = await supabase.rpc('join_class', { code })
     if (error) {
       setPageError(error.message)
       return
     }
+    if (typeof classId !== 'string' || !classId) {
+      setPageError('The class was joined, but it could not be opened. Refresh and try again.')
+      return
+    }
+    form.reset()
+    setSelectedClassId(classId)
     setPageError('')
     setRefreshKey((key) => key + 1)
   }
@@ -603,6 +949,8 @@ function App() {
       .from('submissions')
       .update({ is_correct: isCorrect })
       .eq('id', submission.id)
+      .select('id')
+      .single()
     if (error) {
       setPageError(error.message)
       return
@@ -798,35 +1146,83 @@ function App() {
     (classRecord) => classRecord.id === selectedClassId,
   )
   const isTeacher = profile.role === 'teacher'
+  const teacherBandClasses = teacherGradeBand
+    ? classes.filter(
+        (classRecord) =>
+          (classRecord.grade_band ??
+            getClassGradeBand(classRecord.name)) === teacherGradeBand,
+      )
+    : []
+  const teacherHubTitle = getTeacherHubTitle(selectedClass?.name)
   const currentDashboard =
     dashboard?.classId === selectedClass?.id ? dashboard : null
 
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell${isTeacher ? ' teacher-workspace teacher-launchpad-shell' : ''}${isTeacher ? (teacherGradeBand ? ' teacher-class-shell' : ' teacher-home-shell') : ''}`}
+    >
       <header className="app-header workspace-topbar">
         <div className="workspace-breadcrumb">
           <span>Workspace</span>
           <span aria-hidden="true">/</span>
-          <strong>{isTeacher ? 'Challenge hub' : 'My challenges'}</strong>
+          <strong>
+            {isTeacher
+              ? teacherGradeBand
+                ? teacherHubTitle
+                : 'Teacher launchpad'
+              : 'My challenges'}
+          </strong>
         </div>
-        <div className="account-menu">
-          <div className="avatar" aria-hidden="true">
-            {profile.display_name.slice(0, 1).toUpperCase()}
-          </div>
-          <div className="account-copy">
-            <strong>{profile.display_name}</strong>
-            <span>{isTeacher ? 'Teacher' : 'Student'}</span>
-          </div>
-          <button
-            className="button button-quiet"
-            onClick={() => setShowProfile(true)}
+        <details className="account-menu account-menu-dropdown">
+          <summary
+            aria-label={`Open account menu for ${profile.display_name}`}
+            className="account-menu-trigger"
           >
-            Profile
-          </button>
-          <button className="button button-quiet" onClick={handleSignOut}>
-            Sign out
-          </button>
-        </div>
+            <span className="avatar" aria-hidden="true">
+              {profile.display_name.slice(0, 1).toUpperCase()}
+            </span>
+            <span className="account-copy">
+              <strong>{profile.display_name}</strong>
+              <span>{isTeacher ? 'Teacher' : 'Student'}</span>
+            </span>
+            <span className="account-menu-chevron" aria-hidden="true">⌄</span>
+          </summary>
+          <div className="account-menu-panel">
+            <div className="account-menu-identity">
+              <span className="avatar account-menu-large-avatar" aria-hidden="true">
+                {profile.display_name.slice(0, 1).toUpperCase()}
+              </span>
+              <span>
+                <strong>{profile.display_name}</strong>
+                <small>{isTeacher ? 'Teacher account' : 'Student account'}</small>
+              </span>
+            </div>
+            <div className="account-menu-divider" />
+            <button
+              className="account-menu-action"
+              onClick={(event) => {
+                event.currentTarget.closest('details')?.removeAttribute('open')
+                setShowProfile(true)
+              }}
+              type="button"
+            >
+              <span aria-hidden="true">⚙</span>
+              Settings &amp; preferences
+              <span aria-hidden="true">›</span>
+            </button>
+            <button
+              className="account-menu-action account-menu-signout"
+              onClick={(event) => {
+                event.currentTarget.closest('details')?.removeAttribute('open')
+                void handleSignOut()
+              }}
+              type="button"
+            >
+              <span aria-hidden="true">↪</span>
+              Sign out
+            </button>
+          </div>
+        </details>
       </header>
 
       <main className="dashboard workspace-layout">
@@ -835,22 +1231,19 @@ function App() {
           <p className="workspace-role">
             {isTeacher ? 'TEACHER WORKSPACE' : 'STUDENT WORKSPACE'}
           </p>
-          <DisplayModeControl
-            value={displayMode}
-            onChange={setDisplayMode}
-            readAloudEnabled={readAloudEnabled}
-            onReadAloudChange={setReadAloudEnabled}
-          />
-          <nav className="workspace-nav" aria-label="Workspace navigation">
-            <button
-              aria-current={isTeacher && teacherView === 'challenges' ? 'page' : undefined}
-              className={`workspace-nav-item${!isTeacher || teacherView === 'challenges' ? ' is-active' : ''}`}
-              onClick={() => setTeacherView('challenges')}
-            >
-              <span aria-hidden="true">{isTeacher ? '⚗' : '✳'}</span>
-              {isTeacher ? 'Challenge hub' : 'My challenges'}
-            </button>
-            {isTeacher ? (
+          {(!isTeacher || teacherGradeBand) ? (
+            <nav className="workspace-nav" aria-label="Workspace navigation">
+              <button
+                aria-current={isTeacher && teacherView === 'challenges' ? 'page' : undefined}
+                className={`workspace-nav-item${!isTeacher || teacherView === 'challenges' ? ' is-active' : ''}`}
+                onClick={() => setTeacherView('challenges')}
+              >
+                <span aria-hidden="true">{isTeacher ? '⚗' : '✳'}</span>
+                {isTeacher
+                  ? getTeacherHubTitle(selectedClass?.name)
+                  : 'My challenges'}
+              </button>
+              {isTeacher ? (
               <>
                 <button
                   aria-current={teacherView === 'progress' ? 'page' : undefined}
@@ -860,22 +1253,35 @@ function App() {
                   <span aria-hidden="true">▤</span>
                   Class progress
                 </button>
-                <button
-                  className="workspace-nav-item"
-                  onClick={() => setShowClassManagement(true)}
-                  disabled={!selectedClass}
-                >
-                  <span aria-hidden="true">♧</span>
-                  My classes
-                </button>
               </>
-            ) : null}
-          </nav>
-          <div className="workspace-class-list">
+              ) : null}
+            </nav>
+          ) : (
+            <nav className="workspace-nav teacher-launchpad-nav" aria-label="Teacher navigation">
+              <button
+                aria-current="page"
+                className="workspace-nav-item is-active"
+                type="button"
+              >
+                <span aria-hidden="true">⌂</span>
+                Dashboard
+              </button>
+            </nav>
+          )}
+          {(!isTeacher || teacherGradeBand) ? <div className="workspace-class-list">
             <p className="sidebar-label">
-              {isTeacher ? 'YOUR CLASS' : 'YOUR CLASSES'}
+              {isTeacher
+                ? teacherGradeBand
+                  ? `${teacherGradeBand} CLASSES`
+                  : 'CHOOSE A GRADE BAND'
+                : 'YOUR CLASSES'}
             </p>
-            {classes.map((classRecord) => (
+            {(isTeacher && teacherGradeBand
+              ? teacherBandClasses
+              : isTeacher
+                ? []
+                : classes
+            ).map((classRecord) => (
               <button
                 className={`class-link${selectedClassId === classRecord.id ? ' is-active' : ''}`}
                 key={classRecord.id}
@@ -885,30 +1291,7 @@ function App() {
                 <span>{classRecord.name}</span>
               </button>
             ))}
-            {isTeacher ? (
-              <button
-                className="new-class-link"
-                onClick={() => setShowClassForm((visible) => !visible)}
-              >
-                <span aria-hidden="true">+</span> Create a class
-              </button>
-            ) : null}
-          </div>
-          {showClassForm ? (
-            <form className="sidebar-form" onSubmit={createClass}>
-              <label htmlFor="className">Class name</label>
-              <input
-                autoFocus
-                id="className"
-                name="className"
-                placeholder="e.g. Grade 7 Science"
-                required
-              />
-              <button className="button button-primary" type="submit">
-                Create class
-              </button>
-            </form>
-          ) : null}
+          </div> : null}
           {!isTeacher ? (
             <form className="join-form" onSubmit={joinClass}>
               <label htmlFor="joinCode">Join a class</label>
@@ -953,7 +1336,57 @@ function App() {
               </button>
             </div>
           ) : null}
-          {selectedClass ? (
+          {isTeacher ? (
+            teacherGradeBand ? (
+              <TeacherClassOverview
+                band={teacherGradeBand}
+                classes={teacherBandClasses}
+                selectedClassId={selectedClassId}
+                showCreateForm={showClassForm}
+                onSelect={setSelectedClassId}
+                onCopyCode={copyJoinCode}
+                onCreateClass={createClass}
+                onToggleCreateForm={() =>
+                  setShowClassForm((visible) => !visible)
+                }
+                onMoveClass={moveClass}
+                onChangeBand={() => {
+                  setTeacherGradeBand(null)
+                  setSelectedClassId('')
+                  setShowClassForm(false)
+                }}
+              />
+            ) : (
+              <TeacherBandChooser
+                classes={classes}
+                teacherName={profile.display_name}
+                onChoose={(band) => {
+                  setTeacherGradeBand(band)
+                  setShowClassForm(false)
+                  setTeacherView('challenges')
+                  const firstClass = classes.find(
+                    (classRecord) =>
+                      (classRecord.grade_band ??
+                        getClassGradeBand(classRecord.name)) === band,
+                  )
+                  setSelectedClassId(firstClass?.id ?? '')
+                }}
+              />
+            )
+          ) : null}
+          {isTeacher &&
+          teacherGradeBand &&
+          selectedClass &&
+          showClassMessageForm ? (
+            <ClassMessageEditor
+              key={selectedClass.id}
+              classRecord={selectedClass}
+              onCancel={() => setShowClassMessageForm(false)}
+              onClear={clearClassMessage}
+              onSave={saveClassMessage}
+            />
+          ) : null}
+          {selectedClass && (!isTeacher || teacherGradeBand) ? (
             <>
               <div className="page-heading workspace-page-heading">
                 <div>
@@ -962,42 +1395,46 @@ function App() {
                       ? 'A WORKSHOP FOR CURIOUS MINDS'
                       : 'YOUR LEARNING SPACE'}
                   </p>
-                  <h1>{isTeacher ? 'Challenge hub' : 'Explore. Create. Discover.'}</h1>
+                  <h1>{isTeacher ? teacherHubTitle : 'Explore. Create. Discover.'}</h1>
                   <p className="page-subtitle">
                     {isTeacher
                       ? 'Small experiments. Real discoveries. See what your class can do.'
                       : 'Pick one challenge and give your curiosity room to grow.'}
                   </p>
                 </div>
-                {isTeacher ? (
-                  <div className="class-heading-actions">
-                    {teacherView === 'challenges' ? (
+                <div className="class-heading-actions">
+                  {isTeacher ? (
+                    <>
+                      {teacherView === 'challenges' ? (
+                        <button
+                          className="button button-primary create-challenge-button"
+                          onClick={() => {
+                            setEditingChallenge(null)
+                            setShowChallengeForm(true)
+                          }}
+                        >
+                          <span aria-hidden="true">+</span> Create a challenge
+                        </button>
+                      ) : null}
                       <button
-                        className="button button-primary create-challenge-button"
-                        onClick={() => {
-                          setEditingChallenge(null)
-                          setShowChallengeForm(true)
-                        }}
+                        className="button button-secondary manage-class-button"
+                        onClick={() => setShowClassManagement(true)}
                       >
-                        <span aria-hidden="true">+</span> Create a challenge
+                        Manage class
                       </button>
-                    ) : null}
-                    <button
-                      className="join-code"
-                      onClick={() => void copyJoinCode(selectedClass.join_code)}
-                      title="Copy class join code"
-                    >
-                      <span>CLASS JOIN CODE · COPY</span>
-                      <strong>{selectedClass.join_code}</strong>
-                    </button>
-                    <button
-                      className="button button-secondary manage-class-button"
-                      onClick={() => setShowClassManagement(true)}
-                    >
-                      Manage class
-                    </button>
-                  </div>
-                ) : null}
+                    </>
+                  ) : null}
+                  <button
+                    className="button button-secondary"
+                    onClick={() => {
+                      setPageError('')
+                      setRefreshKey((key) => key + 1)
+                    }}
+                    type="button"
+                  >
+                    Refresh class
+                  </button>
+                </div>
               </div>
 
               <section
@@ -1010,23 +1447,58 @@ function App() {
                       ? selectedClass.name.toUpperCase()
                       : `YOUR LEARNING ADVENTURE · ${selectedClass.name.toUpperCase()}`}
                   </p>
+                  {selectedClass.message_type ? (
+                    <span className="class-greeting-message-type">
+                      {selectedClass.message_type}
+                    </span>
+                  ) : null}
                   <h2>
                     {isTeacher
-                      ? 'A good day to ask “what if?”'
-                      : 'Your next big discovery starts here!'}
+                      ? selectedClass.message_heading ||
+                        'A good day to ask “what if?”'
+                      : selectedClass.message_heading ||
+                        'Your next big discovery starts here!'}
                   </h2>
-                  <p>
+                  <p
+                    className={
+                      selectedClass.message_content
+                        ? 'class-greeting-custom-content'
+                        : undefined
+                    }
+                  >
                     {isTeacher
-                      ? `${currentDashboard?.members.length ?? 0} curious minds · ${currentDashboard?.challenges.filter((challenge) => challenge.is_published).length ?? 0} active challenges · Endless possibilities`
+                      ? selectedClass.message_content ||
+                        `${currentDashboard?.members.length ?? 0} curious minds · ${currentDashboard?.challenges.filter((challenge) => challenge.is_published).length ?? 0} active challenges · Endless possibilities`
                       : currentDashboard
-                        ? 'Pick a challenge that sparks your curiosity. Every attempt helps you grow.'
+                        ? selectedClass.message_content ||
+                          'Pick a challenge that sparks your curiosity. Every attempt helps you grow.'
                         : 'Getting your next discoveries ready...'}
                   </p>
+                  {isTeacher && selectedClass.message_content ? (
+                    <p className="class-greeting-stats">
+                      {currentDashboard?.members.length ?? 0} curious minds ·{' '}
+                      {currentDashboard?.challenges.filter(
+                        (challenge) => challenge.is_published,
+                      ).length ?? 0}{' '}
+                      active challenges
+                    </p>
+                  ) : null}
                 </div>
                 {isTeacher ? (
-                  <div className="class-greeting-orbit" aria-hidden="true">
-                    <span>◎</span>
-                    <i />
+                  <div className="class-greeting-teacher-actions">
+                    <button
+                      className="button class-message-edit-button"
+                      onClick={() => setShowClassMessageForm(true)}
+                      type="button"
+                    >
+                      {selectedClass.message_content
+                        ? 'Edit class message'
+                        : 'Add class message'}
+                    </button>
+                    <div className="class-greeting-orbit" aria-hidden="true">
+                      <span>◎</span>
+                      <i />
+                    </div>
                   </div>
                 ) : (
                   <div className="student-greeting-count" aria-label={`${currentDashboard?.challenges.filter((challenge) => challenge.is_published).length ?? 0} challenges to explore`}>
@@ -1045,10 +1517,6 @@ function App() {
                   dashboard={currentDashboard}
                   view={teacherView}
                   onViewChange={setTeacherView}
-                  onCreate={() => {
-                    setEditingChallenge(null)
-                    setShowChallengeForm(true)
-                  }}
                   onDelete={deleteChallenge}
                   onEdit={(challenge) => {
                     setEditingChallenge(challenge)
@@ -1073,12 +1541,7 @@ function App() {
                 />
               )}
             </>
-          ) : (
-            <EmptyClasses
-              isTeacher={isTeacher}
-              onCreate={() => setShowClassForm(true)}
-            />
-          )}
+          ) : isTeacher ? null : <EmptyClasses isTeacher={false} />}
         </section>
       </main>
 
@@ -1107,8 +1570,12 @@ function App() {
       ) : null}
       {showProfile ? (
         <ProfileDialog
+          displayMode={displayMode}
           email={user.email ?? ''}
+          onDisplayModeChange={setDisplayMode}
+          onReadAloudChange={setReadAloudEnabled}
           profile={profile}
+          readAloudEnabled={readAloudEnabled}
           onCancel={() => setShowProfile(false)}
           onSave={updateProfile}
         />
@@ -1134,7 +1601,6 @@ function TeacherDashboard({
   dashboard,
   view,
   onViewChange,
-  onCreate,
   onDelete,
   onEdit,
   onEvaluateSubmission,
@@ -1145,7 +1611,6 @@ function TeacherDashboard({
   dashboard: DashboardData | null
   view: 'challenges' | 'progress'
   onViewChange: (view: 'challenges' | 'progress') => void
-  onCreate: () => void
   onDelete: (challenge: Challenge) => void
   onEdit: (challenge: Challenge) => void
   onEvaluateSubmission: (submission: Submission, isCorrect: boolean) => void
@@ -1277,6 +1742,11 @@ function TeacherDashboard({
                   <p className="teacher-challenge-prompt">{challenge.prompt}</p>
                   <div className="challenge-meta">
                     <span>{challenge.grade_band}</span>
+                    {challenge.program_day ? (
+                      <span className="daily-tag">
+                        Day {challenge.program_day} · {challenge.level}
+                      </span>
+                    ) : null}
                     <span>
                       {challenge.answer_type === 'multiple_choice'
                         ? 'Multiple choice'
@@ -1352,10 +1822,7 @@ function TeacherDashboard({
           (challengeFilter === 'drafts' && draftChallenges.length === 0 ? (
             <div className="empty-state compact-empty">
               <h2>No drafts yet</h2>
-              <p>Save a challenge as a draft to finish it later.</p>
-              <button className="button button-primary" onClick={onCreate}>
-                Create a challenge
-              </button>
+              <p>Use Create a challenge above and save it as a draft to finish later.</p>
             </div>
           ) : challengeFilter === 'completed' ? (
             <div className="empty-state compact-empty">
@@ -1366,7 +1833,7 @@ function TeacherDashboard({
               </p>
             </div>
           ) : activeChallenges.length === 0 && !query ? (
-            <EmptyChallenges onCreate={onCreate} />
+            <EmptyChallenges />
           ) : (
             <div className="empty-state compact-empty">
               <h2>No matching challenges</h2>
@@ -1441,6 +1908,7 @@ function StudentDashboard({
 
   return (
     <>
+      <DailyJourney challenges={challenges} submissions={submissions} />
       <div className="student-dashboard-head">
         <div
           className="student-filter-tabs"
@@ -1516,6 +1984,11 @@ function StudentDashboard({
             <div className="challenge-meta">
               <span>{challenge.subject}</span>
               <span>{challenge.grade_band}</span>
+              {challenge.program_day ? (
+                <span className="daily-tag">
+                  Day {challenge.program_day} · {challenge.level}
+                </span>
+              ) : null}
               {submission ? <span>Submitted</span> : null}
             </div>
             <form
@@ -1959,13 +2432,21 @@ function ClassManagement({
 }
 
 function ProfileDialog({
+  displayMode,
   email,
+  onDisplayModeChange,
+  onReadAloudChange,
   profile,
+  readAloudEnabled,
   onCancel,
   onSave,
 }: {
+  displayMode: DisplayMode
   email: string
+  onDisplayModeChange: (mode: DisplayMode) => void
+  onReadAloudChange: (enabled: boolean) => void
   profile: Profile
+  readAloudEnabled: boolean
   onCancel: () => void
   onSave: (event: FormEvent<HTMLFormElement>) => void
 }) {
@@ -1981,8 +2462,8 @@ function ProfileDialog({
       >
         <header className="modal-header">
           <div>
-            <p className="eyebrow">YOUR ACCOUNT</p>
-            <h2 id="profile-title">Profile</h2>
+            <p className="eyebrow">YOUR WORKSPACE</p>
+            <h2 id="profile-title">Settings &amp; preferences</h2>
           </div>
           <button
             aria-label="Close dialog"
@@ -1993,6 +2474,26 @@ function ProfileDialog({
             ×
           </button>
         </header>
+        <section
+          aria-labelledby="accessibility-preferences-title"
+          className="settings-preferences"
+        >
+          <div>
+            <p className="eyebrow">ACCESSIBILITY</p>
+            <h3 id="accessibility-preferences-title">Learning preferences</h3>
+            <p>Choose how the workspace looks and whether it reads content aloud.</p>
+          </div>
+          <DisplayModeControl
+            value={displayMode}
+            onChange={onDisplayModeChange}
+            readAloudEnabled={readAloudEnabled}
+            onReadAloudChange={onReadAloudChange}
+          />
+        </section>
+        <div className="settings-profile-heading">
+          <p className="eyebrow">ACCOUNT</p>
+          <h3>Profile details</h3>
+        </div>
         <form className="challenge-form" onSubmit={onSave}>
           <label className="field-label">
             Display name
@@ -2075,13 +2576,421 @@ function AnswerViewer({
   )
 }
 
-function EmptyClasses({
-  isTeacher,
-  onCreate,
+function TeacherBandChooser({
+  classes,
+  teacherName,
+  onChoose,
 }: {
-  isTeacher: boolean
-  onCreate: () => void
+  classes: ClassRecord[]
+  teacherName: string
+  onChoose: (band: TeacherGradeBand) => void
 }) {
+  const displayName = teacherName.trim() || 'Teacher'
+  const classCounts = teacherGradeBands.map((band) => ({
+    ...band,
+    classCount: classes.filter(
+      (classRecord) =>
+        (classRecord.grade_band ?? getClassGradeBand(classRecord.name)) ===
+        band.id,
+    ).length,
+  }))
+  return (
+    <section
+      aria-labelledby="teacher-band-title"
+      className="teacher-band-chooser teacher-band-chooser-warm"
+    >
+      <div className="teacher-launchpad-layout">
+        <div className="teacher-launchpad-main">
+          <section className="teacher-mission-launch">
+            <p className="teacher-mission-kicker">TEACHER DASHBOARD</p>
+            <h1 id="teacher-band-title">Choose a grade group</h1>
+            <p>Open a group to view or create classes, then select a class to manage its challenges.</p>
+          </section>
+          <section
+            aria-labelledby="teacher-groups-title"
+            className="teacher-band-groups"
+          >
+            <header>
+              <div>
+                <p className="eyebrow">YOUR CLASSROOMS</p>
+                <h2 id="teacher-groups-title">Your grade groups</h2>
+              </div>
+              <span>Choose a group to view its classes</span>
+            </header>
+            <div className="teacher-band-grid">
+              {classCounts.map((band) => (
+                  <button
+                    className={`teacher-band-card teacher-band-card-${band.id
+                      .toLowerCase()
+                      .replace('-', '')}`}
+                    key={band.id}
+                    onClick={() => onChoose(band.id)}
+                    type="button"
+                  >
+                    <span className="teacher-band-card-top">
+                      <span className="teacher-band-art" aria-hidden="true">
+                        {band.id === 'K-5'
+                          ? '⚛'
+                          : band.id === '6-8'
+                            ? '⚗'
+                            : '⚙'}
+                      </span>
+                    </span>
+                    <strong className="teacher-band-title">
+                      <span className="teacher-band-range-label">{band.id}</span>
+                      <span className="teacher-band-name">
+                        {band.id === 'K-5'
+                          ? 'Discovery'
+                          : band.id === '6-8'
+                            ? 'Builders'
+                            : 'Innovators'}
+                      </span>
+                    </strong>
+                    <span className="teacher-band-count">
+                      <strong>{band.classCount}</strong>
+                      {band.classCount === 1 ? 'class' : 'classes'}
+                    </span>
+                    <span className="teacher-band-view-link">
+                      View classes <span aria-hidden="true">→</span>
+                    </span>
+                  </button>
+              ))}
+            </div>
+          </section>
+        </div>
+        <aside className="teacher-mission-rail" aria-label="Teacher dashboard summary">
+          <section className="teacher-mission-profile">
+            <span className="teacher-mission-avatar" aria-hidden="true">
+              {displayName.slice(0, 1).toUpperCase()}
+            </span>
+            <div>
+              <p>Welcome back,</p>
+              <h2>{displayName}</h2>
+              <span>Teacher workspace</span>
+            </div>
+          </section>
+          <section className="teacher-mission-summary">
+            <span aria-hidden="true">✦</span>
+            <div>
+              <strong>{classes.length} {classes.length === 1 ? 'class' : 'classes'}</strong>
+              <p>Ready for discovery</p>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </section>
+  )
+}
+
+function TeacherClassOverview({
+  band,
+  classes,
+  selectedClassId,
+  showCreateForm,
+  onSelect,
+  onCopyCode,
+  onCreateClass,
+  onToggleCreateForm,
+  onMoveClass,
+  onChangeBand,
+}: {
+  band: TeacherGradeBand
+  classes: ClassRecord[]
+  selectedClassId: string
+  showCreateForm: boolean
+  onSelect: (classId: string) => void
+  onCopyCode: (joinCode: string) => void
+  onCreateClass: (event: FormEvent<HTMLFormElement>) => void
+  onToggleCreateForm: () => void
+  onMoveClass: (classId: string, direction: -1 | 1) => void
+  onChangeBand: () => void
+}) {
+  const [showAllClasses, setShowAllClasses] = useState(false)
+  const [selectedGrade, setSelectedGrade] = useState(
+    band === 'K-5' ? '5' : band === '6-8' ? '6' : '9',
+  )
+  const [selectedSubject, setSelectedSubject] = useState('Math')
+  const [sectionPrompt, setSectionPrompt] = useState(false)
+  const [sectionChoice, setSectionChoice] = useState('A')
+  const selectedClass = classes.find(
+    (classRecord) => classRecord.id === selectedClassId,
+  )
+  const visibleClasses =
+    showAllClasses || !selectedClass ? classes : [selectedClass]
+  const grades =
+    teacherGradeBands.find((item) => item.id === band)?.grades ?? []
+  const previewName = `${
+    selectedGrade === 'Kindergarten'
+      ? selectedGrade
+      : `Grade ${getGradeLabel(selectedGrade)}`
+  } ${selectedSubject}`
+  const existingForCourse = classes.filter(
+    (classRecord) =>
+      getBaseClassName(classRecord.name) === getBaseClassName(previewName),
+  )
+  const occupiedSections = new Set(
+    existingForCourse
+      .map((classRecord) => getClassSection(classRecord.name))
+      .filter((section): section is string => Boolean(section)),
+  )
+  const availableSections = ['A', 'B', 'C'].filter(
+    (section) => !occupiedSections.has(section),
+  )
+  const selectedSection = availableSections.includes(sectionChoice)
+    ? sectionChoice
+    : (availableSections[0] ?? '')
+
+  function handleCreateClass(event: FormEvent<HTMLFormElement>) {
+    const formData = new FormData(event.currentTarget)
+    const section = String(formData.get('section') ?? '')
+    if (existingForCourse.length > 0 && !sectionPrompt) {
+      event.preventDefault()
+      setSectionPrompt(true)
+      setSectionChoice(availableSections[0] ?? '')
+      return
+    }
+    if (existingForCourse.length > 0 && !section) {
+      event.preventDefault()
+      return
+    }
+    setSectionPrompt(false)
+    onCreateClass(event)
+  }
+
+  return (
+    <section
+      aria-labelledby="teacher-classes-title"
+      className={`teacher-class-overview teacher-class-overview-${band
+        .toLowerCase()
+        .replace('-', '')}`}
+    >
+      <header className="teacher-class-overview-heading">
+        <div>
+          <p className="eyebrow">YOUR CLASSROOMS</p>
+          <h2 id="teacher-classes-title">
+            {selectedClass && !showAllClasses
+              ? 'Current class'
+              : 'Your classes'}
+          </h2>
+          <p>
+            {selectedClass && !showAllClasses
+              ? 'Your open class and its student join code.'
+              : 'Choose a class to open its challenge hub and share its join code.'}
+          </p>
+        </div>
+        <div className="teacher-class-overview-actions">
+          <button
+            className="button button-secondary teacher-all-classes-button"
+            onClick={onChangeBand}
+            type="button"
+          >
+            Change grade band
+          </button>
+          {classes.length > 1 ? (
+            <button
+              className="button button-secondary teacher-all-classes-button"
+              onClick={() => setShowAllClasses((shown) => !shown)}
+              type="button"
+            >
+              {showAllClasses ? 'Current class only' : 'All classes'}
+            </button>
+          ) : null}
+          <button
+            className="button button-primary teacher-create-class-button"
+            onClick={onToggleCreateForm}
+            type="button"
+          >
+            <span aria-hidden="true">{showCreateForm ? '×' : '+'}</span>
+            {showCreateForm ? 'Cancel' : 'Create a class'}
+          </button>
+        </div>
+      </header>
+      {showCreateForm ? (
+        <form className="teacher-create-class-form" onSubmit={handleCreateClass}>
+          <label htmlFor="classGrade">
+            Grade
+            <select
+              autoFocus
+              id="classGrade"
+              name="grade"
+              onChange={(event) => {
+                setSelectedGrade(event.target.value)
+                setSectionPrompt(false)
+              }}
+              value={selectedGrade}
+            >
+              {grades.map((grade) => {
+                return (
+                  <option key={grade} value={grade}>
+                    {grade === 'Kindergarten'
+                      ? grade
+                      : `Grade ${getGradeLabel(grade)}`}
+                  </option>
+                )
+              })}
+            </select>
+          </label>
+          <label htmlFor="classSubject">
+            Subject
+            <select
+              id="classSubject"
+              name="subject"
+              onChange={(event) => {
+                setSelectedSubject(event.target.value)
+                setSectionPrompt(false)
+              }}
+              value={selectedSubject}
+            >
+              <option>Math</option>
+              <option>Science</option>
+              <option>Technology</option>
+              <option>Engineering</option>
+            </select>
+          </label>
+          <p className="teacher-create-class-preview">
+            Class name preview <strong>{previewName}</strong>
+          </p>
+          {sectionPrompt ? (
+            <div
+              className="teacher-section-prompt"
+              role="group"
+              aria-labelledby="teacher-section-title"
+            >
+              <div>
+                <strong id="teacher-section-title">
+                  You already created {previewName}.
+                </strong>
+                <p>
+                  Create another class with a separate join code. Choose an
+                  available section.
+                </p>
+              </div>
+              {availableSections.length ? (
+                <>
+                  <label htmlFor="classSection">
+                    Section
+                    <select
+                      autoFocus
+                      id="classSection"
+                      name="section"
+                      onChange={(event) => setSectionChoice(event.target.value)}
+                      required
+                      value={selectedSection}
+                    >
+                      {availableSections.map((section) => (
+                        <option key={section} value={section}>
+                          Section {section}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <span className="teacher-section-name">
+                    Class name:{' '}
+                    <strong>
+                      {previewName} - Section {selectedSection}
+                    </strong>
+                  </span>
+                  <button className="button button-primary" type="submit">
+                    Create Section {selectedSection}
+                  </button>
+                </>
+              ) : (
+                <p className="teacher-section-full">
+                  Sections A, B, and C already exist for this class.
+                </p>
+              )}
+            </div>
+          ) : (
+            <button className="button button-primary" type="submit">
+              Create class
+            </button>
+          )}
+        </form>
+      ) : null}
+      {classes.length ? (
+        <div className="teacher-class-grid">
+          {visibleClasses.map((classRecord) => {
+            const selected = classRecord.id === selectedClassId
+            const index = classes.findIndex(
+              (item) => item.id === classRecord.id,
+            )
+            return (
+              <article
+                className={`teacher-class-card${selected ? ' is-selected' : ''}`}
+                key={classRecord.id}
+              >
+                <button
+                  aria-pressed={selected}
+                  className="teacher-class-select"
+                  onClick={() => {
+                    onSelect(classRecord.id)
+                    setShowAllClasses(false)
+                  }}
+                  type="button"
+                >
+                  <span className="teacher-class-card-label">
+                    {selected ? 'CURRENT CLASS' : 'OPEN CLASS'}
+                  </span>
+                  <strong>{classRecord.name}</strong>
+                  <span>
+                    {getTeacherHubTitle(classRecord.name)}
+                  </span>
+                </button>
+                <div className="teacher-class-code">
+                  <div>
+                    <span>CLASS JOIN CODE</span>
+                    <strong>{classRecord.join_code}</strong>
+                  </div>
+                  <button
+                    aria-label={`Copy join code for ${classRecord.name}`}
+                    className="teacher-copy-code"
+                    onClick={() => onCopyCode(classRecord.join_code)}
+                    type="button"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <div className="teacher-class-card-footer">
+                  <span>Share this code with students</span>
+                  <div className="teacher-class-order">
+                    <button
+                      aria-label={`Move ${classRecord.name} up`}
+                      disabled={index === 0}
+                      onClick={() => onMoveClass(classRecord.id, -1)}
+                      title="Move class up"
+                      type="button"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      aria-label={`Move ${classRecord.name} down`}
+                      disabled={index === classes.length - 1}
+                      onClick={() => onMoveClass(classRecord.id, 1)}
+                      title="Move class down"
+                      type="button"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="teacher-class-empty">
+          <span aria-hidden="true">✳</span>
+          <div>
+            <strong>Your class list is ready to grow.</strong>
+            <p>Create your first class to get a shareable student join code.</p>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function EmptyClasses({ isTeacher }: { isTeacher: boolean }) {
   return (
     <div className="empty-state empty-classes">
       <span className="empty-illustration" aria-hidden="true">
@@ -2090,29 +2999,143 @@ function EmptyClasses({
       <h2>{isTeacher ? 'Start with your first class' : 'Join your first class'}</h2>
       <p>
         {isTeacher
-          ? 'Create a classroom, then share its join code with your students.'
+          ? 'Use Create a class above to set up a classroom and get a student join code.'
           : 'Enter a class join code to see the challenges your teacher has made.'}
       </p>
-      {isTeacher ? (
-        <button className="button button-primary" onClick={onCreate}>
-          Create a class
-        </button>
-      ) : null}
     </div>
   )
 }
 
-function EmptyChallenges({ onCreate }: { onCreate: () => void }) {
+function ClassMessageEditor({
+  classRecord,
+  onCancel,
+  onClear,
+  onSave,
+}: {
+  classRecord: ClassRecord
+  onCancel: () => void
+  onClear: () => Promise<void>
+  onSave: (
+    messageType: ClassMessageType,
+    heading: string,
+    content: string,
+  ) => Promise<boolean>
+}) {
+  const [messageType, setMessageType] = useState<ClassMessageType>(
+    classRecord.message_type ?? 'Announcement',
+  )
+  const [heading, setHeading] = useState(classRecord.message_heading ?? '')
+  const [content, setContent] = useState(classRecord.message_content ?? '')
+  const [saving, setSaving] = useState(false)
+
+  async function submitMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSaving(true)
+    try {
+      await onSave(messageType, heading, content)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function removeMessage() {
+    setSaving(true)
+    try {
+      await onClear()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form
+      aria-labelledby="class-message-editor-title"
+      className="class-message-editor"
+      onSubmit={(event) => void submitMessage(event)}
+    >
+      <div>
+        <p className="eyebrow">MESSAGE FOR {classRecord.name.toUpperCase()}</p>
+        <h2 id="class-message-editor-title">
+          {classRecord.message_content
+            ? 'Edit class message'
+            : 'Add a class message'}
+        </h2>
+        <p>Students in this class will see your message at the top of their page.</p>
+      </div>
+      <label>
+        Message type
+        <select
+          onChange={(event) => {
+            const value = event.target.value
+            if (isClassMessageType(value)) setMessageType(value)
+          }}
+          value={messageType}
+        >
+          {classMessageTypes.map((type) => (
+            <option key={type}>{type}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Heading
+        <input
+          maxLength={100}
+          onChange={(event) => setHeading(event.target.value)}
+          placeholder="e.g. Welcome to our class!"
+          required
+          value={heading}
+        />
+      </label>
+      <label>
+        Message
+        <textarea
+          maxLength={2000}
+          onChange={(event) => setContent(event.target.value)}
+          placeholder="Write an announcement, class description, rules, or guidelines..."
+          required
+          rows={4}
+          value={content}
+        />
+      </label>
+      <div className="class-message-editor-actions">
+        {classRecord.message_content ? (
+          <button
+            className="button button-secondary"
+            disabled={saving}
+            onClick={() => void removeMessage()}
+            type="button"
+          >
+            Remove message
+          </button>
+        ) : null}
+        <button
+          className="button button-secondary"
+          disabled={saving}
+          onClick={onCancel}
+          type="button"
+        >
+          Cancel
+        </button>
+        <button
+          className="button button-primary"
+          disabled={saving}
+          type="submit"
+        >
+          {saving ? 'Saving...' : 'Save for students'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function EmptyChallenges() {
   return (
     <div className="empty-state">
       <span className="empty-illustration" aria-hidden="true">
         ✳
       </span>
       <h2>Your next great question starts here</h2>
-      <p>Create a short challenge to get your students thinking.</p>
-      <button className="button button-primary" onClick={onCreate}>
-        Create a challenge
-      </button>
+      <p>Use Create a challenge above to get your students thinking.</p>
     </div>
   )
 }
@@ -2133,13 +3156,37 @@ function SubjectMark({ subject }: { subject: Challenge['subject'] }) {
 
 function Brand() {
   return (
-    <a className="brand workspace-brand" href="/" aria-label="STEM Hub home">
-      <span className="brand-mark" aria-hidden="true">
-        ✳
-      </span>
-      <span className="brand-name">
+    <a className="brand workspace-brand" href="/" aria-label="STEM Challenge Hub home">
+      <svg
+        aria-hidden="true"
+        className="brand-mark workspace-brand-mark"
+        viewBox="0 0 40 40"
+      >
+        <ellipse
+          cx="20"
+          cy="20"
+          rx="17"
+          ry="6.5"
+          fill="none"
+          stroke="#2451d4"
+          strokeWidth="2.5"
+          transform="rotate(-35 20 20)"
+        />
+        <ellipse
+          cx="20"
+          cy="20"
+          rx="17"
+          ry="6.5"
+          fill="none"
+          stroke="#f97316"
+          strokeWidth="2.5"
+          transform="rotate(35 20 20)"
+        />
+        <circle cx="20" cy="20" r="3" fill="#7c3aed" />
+      </svg>
+      <span className="brand-name workspace-brand-name">
         <strong>STEM</strong>
-        <small>Hub</small>
+        <span>Challenge Hub</span>
       </span>
     </a>
   )
@@ -2164,7 +3211,16 @@ function LoadingInline() {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong.'
+  if (error instanceof Error) return error.message
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof error.message === 'string'
+  ) {
+    return error.message
+  }
+  return 'An unexpected error occurred.'
 }
 
 export default App

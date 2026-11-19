@@ -175,12 +175,28 @@ export function AuthScreen({
         </a>
         <div className="auth-header-tools">
           <span className="auth-header-status">A curious place to learn</span>
-          <DisplayModeControl
-            value={displayMode}
-            onChange={onDisplayModeChange}
-            readAloudEnabled={readAloudEnabled}
-            onReadAloudChange={onReadAloudChange}
-          />
+          <details className="auth-preferences-menu">
+            <summary aria-label="Open accessibility preferences">
+              <span className="auth-menu-lines" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+            </summary>
+            <div className="auth-preferences-panel">
+              <p className="eyebrow">ACCESSIBILITY</p>
+              <h2>Learning preferences</h2>
+              <p className="auth-preferences-intro">
+                Adjust how the hub looks and sounds.
+              </p>
+              <DisplayModeControl
+                value={displayMode}
+                onChange={onDisplayModeChange}
+                readAloudEnabled={readAloudEnabled}
+                onReadAloudChange={onReadAloudChange}
+              />
+            </div>
+          </details>
         </div>
       </header>
 

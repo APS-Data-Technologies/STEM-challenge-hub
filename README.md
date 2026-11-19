@@ -40,7 +40,7 @@ Teachers want quick ways to give hands-on practice (a math puzzle, a science pre
 
 | # | Feature | What it does |
 |---|---------|--------------|
-| 1 | **Sign in with two roles** | Teacher and student accounts with email password recovery. Teachers land on *My classes*; students land on *My challenges*. Students can't open teacher pages. |
+| 1 | **Sign in with two roles** | Teacher and student accounts with email password recovery. Teachers choose a grade group on their dashboard; students land on *My challenges*. Students can't open teacher pages. |
 | 2 | **Create a challenge** | Teachers create, edit and delete challenges with a subject (Science, Technology, Engineering, Math), grade band and answer type (multiple choice or short answer). |
 | 3 | **Join a class** | Each class gets a unique ~6-character join code. Students enter it to see that class's challenges. |
 | 4 | **Submit answers** | Students get immediate correct/try-again feedback for multiple-choice answers. Short answers are saved for teacher review. |
@@ -49,7 +49,7 @@ Teachers want quick ways to give hands-on practice (a math puzzle, a science pre
 
 ### Frontend coverage
 
-The current frontend implements the v1 teacher and student flows: role-aware sign-up/sign-in and email password recovery, class creation and joining, class management, challenge drafts and publishing, immediate database-checked feedback for multiple-choice submissions, teacher review of short answers, teacher progress summaries, and profile display-name updates. The sign-in screen and signed-in workspace use the Figma visual draft as a reference; the sign-in screen includes an interactive STEM illustration with changing math problems, a color-changing chemistry flask, a horizontally rotating biology cell, and a robot giggle interaction. The workspace includes role-based side navigation, a class greeting banner, challenge cards with submission progress, and a student discoveries summary. It uses the Supabase policies and RPCs in `/supabase`; the app does not grant access based on a client-selected role.
+The current frontend implements the v1 teacher and student flows: role-aware sign-up/sign-in and email password recovery, a teacher grade-band entry screen for K–5, 6–8, and 9–12 classrooms, class creation and joining, class management, challenge drafts and publishing, immediate database-checked feedback for multiple-choice submissions, teacher review of short answers, teacher progress summaries, and profile display-name updates. If a teacher creates a grade/subject combination they already have, the class form offers an available Section A, B, or C so each class can have its own join code. The sign-in screen and signed-in workspace use the Figma visual draft as a reference; the sign-in screen includes an interactive STEM illustration with changing math problems, a color-changing chemistry flask, a horizontally rotating biology cell, and a robot giggle interaction. The workspace includes role-based side navigation, a class greeting banner, challenge cards with submission progress, and a student discoveries summary. It uses the Supabase policies and RPCs in `/supabase`; the app does not grant access based on a client-selected role.
 
 The optional challenge library/filters are marked **Stretch**, and the public marketing home is marked **Extra** in the flow document, so they are not included in the v1 app.
 
@@ -88,8 +88,10 @@ Every tool is free or on a free tier.
               (row-level security on every table)
 ```
 
-- **Teachers evaluate submissions.** Multiple-choice answer keys live in a separate `challenge_keys` table that students can't read. Submitting an answer does not reveal correctness; only a teacher can evaluate that student's response. Students see the evaluation after the teacher records it.
+- **Answer feedback.** Multiple-choice answer keys live in a separate `challenge_keys` table that students can't read. The database checks multiple-choice answers immediately. Short answers are saved for teacher review, and students can see the result after the teacher evaluates them.
 - **Joining a class** goes through the `join_class(code)` function, because students can't read a class before they join it.
+- **Classroom workflow.** A teacher selects a grade group, creates a class and shares its join code. A student joins using the code and sees its published challenges and class message. The teacher can review submissions in **Class progress**.
+- **Updates from other users.** Select **Refresh class** to reload classroom data, or return to the browser tab after working elsewhere. Changes made in another session are not pushed live to an already-open page.
 
 ## Getting started
 
@@ -119,7 +121,7 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 ### 3. Set up the database
 
-In the Supabase SQL editor, run `01_schema.sql`, `02_security.sql`, `03_seed.sql`, and `05_scope_multiple_choice_feedback.sql` in that order. Do not run the historical `04_teacher_evaluation.sql` for a new project.
+In the Supabase SQL editor, run `01_schema.sql`, `02_security.sql`, `03_seed.sql`, and `05_scope_multiple_choice_feedback.sql` in that order. The base schema includes class messages, daily challenges, and class grade bands. Do not run the historical `04_teacher_evaluation.sql` for a new project.
 
 ### 4. Load the fictional seed data
 
@@ -192,7 +194,7 @@ Supabase / Postgres. Row-level security (RLS) is **on for every table**.
 - `join_class(code)`: adds the signed-in student to the class with that code. A wrong code returns an error; joining twice does nothing.
 - `submit_answer(challenge_id, answer)`: saves or replaces the student's response. Multiple-choice answers are checked against the protected answer key in the database and return correct/incorrect feedback; short answers remain ungraded until a teacher evaluates them.
 
-For a new Supabase project, run `01_schema.sql`, `02_security.sql`, `03_seed.sql`, and `05_scope_multiple_choice_feedback.sql` in that order. `04_teacher_evaluation.sql` is a historical migration and is not needed for new installs. For an existing project, run `05_scope_multiple_choice_feedback.sql` once after its existing migrations; it recalculates multiple-choice results from the protected answer keys and limits teacher evaluations to short-answer submissions. Do not run `04_teacher_evaluation.sql` again on an existing project because it clears submission results.
+For a new Supabase project, run `01_schema.sql`, `02_security.sql`, `03_seed.sql`, and `05_scope_multiple_choice_feedback.sql` in that order; the base schema includes class message fields, daily challenge fields, and class grade bands. `04_teacher_evaluation.sql` is a historical migration and is not needed for new installs. For an existing project, run `06_class_messages.sql` to add class message fields, `07_daily_challenges.sql` to add the daily challenge program (day 1–100 and Easy/Medium/Hard level), and `08_class_grade_bands.sql` to add and backfill teacher class grade bands. These migrations can be safely rerun if needed. Run `05_scope_multiple_choice_feedback.sql` only if the project has not already applied it; it recalculates multiple-choice results from protected answer keys and limits teacher evaluations to short-answer submissions. Do not run `04_teacher_evaluation.sql` again on an existing project because it clears submission results.
 
 ## How we work
 

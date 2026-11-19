@@ -4,10 +4,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   AnswerType,
   Challenge,
+  DailyLevel,
   GradeBand,
   Subject,
 } from '../lib/types'
-
+import { dailyLevels } from '../lib/daily'
 const subjects: Subject[] = [
   'Science',
   'Technology',
@@ -38,6 +39,7 @@ export function ChallengeForm({
     challenge?.choices?.join('\n') ?? '',
   )
   const [keyAnswer, setKeyAnswer] = useState('')
+  const [isDaily, setIsDaily] = useState(challenge?.program_day != null)
   const [pending, setPending] = useState(false)
 
   useEffect(() => {
@@ -71,6 +73,19 @@ export function ChallengeForm({
     const subject = String(formData.get('subject') ?? '') as Subject
     const gradeBand = String(formData.get('gradeBand') ?? '') as GradeBand
     const isPublished = formData.get('isPublished') === 'on'
+    const programDay = isDaily ? Number(formData.get('programDay')) : null
+    const level = isDaily ? (String(formData.get('level') ?? '') as DailyLevel) : null
+    if (
+      isDaily &&
+      (!Number.isInteger(programDay) ||
+        programDay! < 1 ||
+        programDay! > 100 ||
+        !dailyLevels.includes(level!))
+    ) {
+      onError('Choose a day from 1 to 100 and a level for the daily challenge.')
+      setPending(false)
+      return
+    }
     const choices =
       answerType === 'multiple_choice'
         ? choiceText
@@ -108,6 +123,8 @@ export function ChallengeForm({
       answer_type: answerType,
       choices,
       is_published: isPublished,
+      program_day: programDay,
+      level,
     }
 
     try {
@@ -147,10 +164,19 @@ export function ChallengeForm({
 
       onSaved()
     } catch (saveError) {
+      const code =
+        typeof saveError === 'object' && saveError !== null && 'code' in saveError
+          ? saveError.code
+          : undefined
       onError(
-        saveError instanceof Error
-          ? saveError.message
-          : 'Could not save this challenge.',
+        code === '23505'
+          ? `Day ${programDay} ${level} already has a challenge in this class. Choose another day or level.`
+          : typeof saveError === 'object' &&
+              saveError !== null &&
+              'message' in saveError &&
+              typeof saveError.message === 'string'
+            ? saveError.message
+            : 'Could not save this challenge.',
       )
     } finally {
       setPending(false)
@@ -306,6 +332,47 @@ export function ChallengeForm({
               </label>
             </>
           ) : null}
+          <fieldset className="daily-fieldset">
+            <label className="publish-toggle">
+              <input
+                checked={isDaily}
+                onChange={(event) => setIsDaily(event.target.checked)}
+                type="checkbox"
+              />
+              <span>
+                <strong>Daily challenge</strong>
+                <small>
+                  Add this to the class's 1–100 day program with a level.
+                  Students earn badges and streaks.
+                </small>
+              </span>
+            </label>
+            {isDaily ? (
+              <div className="form-grid">
+                <label className="field-label">
+                  Day (1–100)
+                  <input
+                    defaultValue={challenge?.program_day ?? 1}
+                    max={100}
+                    min={1}
+                    name="programDay"
+                    required
+                    type="number"
+                  />
+                </label>
+                <label className="field-label">
+                  Level
+                  <select defaultValue={challenge?.level ?? 'Easy'} name="level">
+                    {dailyLevels.map((level) => (
+                      <option key={level} value={level}>
+                        {level}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            ) : null}
+          </fieldset>
           <label className="publish-toggle">
             <input
               defaultChecked={challenge?.is_published ?? false}

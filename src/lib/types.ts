@@ -19,7 +19,19 @@ export interface ClassRecord {
   name: string
   join_code: string
   created_at: string
+  grade_band: ClassGradeBand | null
+  message_type: ClassMessageType | null
+  message_heading: string | null
+  message_content: string | null
 }
+
+export type ClassGradeBand = 'K-5' | '6-8' | '9-12'
+
+export type ClassMessageType =
+  | 'Announcement'
+  | 'Description'
+  | 'Rules'
+  | 'Guidelines'
 
 export interface Challenge {
   id: string
@@ -31,8 +43,12 @@ export interface Challenge {
   answer_type: AnswerType
   choices: string[] | null
   is_published: boolean
+  program_day: number | null
+  level: DailyLevel | null
   created_at: string
 }
+
+export type DailyLevel = 'Easy' | 'Medium' | 'Hard'
 
 export interface Submission {
   id: string

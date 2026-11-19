@@ -37,6 +37,10 @@ create table public.classes (
   teacher_id  uuid not null default auth.uid() references public.profiles(id) on delete cascade,
   name        text not null check (length(trim(name)) > 0),
   join_code   text not null unique default public.generate_join_code(),
+  grade_band  text check (grade_band in ('K-5', '6-8', '9-12')),
+  message_type text check (message_type in ('Announcement', 'Description', 'Rules', 'Guidelines')),
+  message_heading text check (length(message_heading) <= 100),
+  message_content text check (length(message_content) <= 2000),
   created_at  timestamptz not null default now()
 );
 
@@ -60,12 +64,22 @@ create table public.challenges (
   answer_type   text not null check (answer_type in ('multiple_choice', 'short_answer')),
   choices       jsonb,            -- e.g. ["Triangle","Square","Circle"]; null for short answer
   is_published  boolean not null default false,
+  program_day   smallint check (program_day between 1 and 100),
+  level         text check (level in ('Easy', 'Medium', 'Hard')),
   created_at    timestamptz not null default now(),
   constraint choices_required_for_mc check (
     answer_type = 'short_answer'
     or (jsonb_typeof(choices) = 'array' and jsonb_array_length(choices) >= 2)
+  ),
+  constraint daily_day_and_level_together check (
+    (program_day is null) = (level is null)
   )
 );
+
+-- one challenge per class, day and level in the daily program
+create unique index challenges_daily_slot_idx
+  on public.challenges (class_id, program_day, level)
+  where program_day is not null;
 
 -- ---------- challenge_keys: correct answers (students never see) ----
 create table public.challenge_keys (
