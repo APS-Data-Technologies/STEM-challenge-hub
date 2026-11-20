@@ -110,3 +110,18 @@ The QA & Release Lead is responsible for:
 - Students must not access another class's private information.
 - Security testing must be repeated after relevant changes.
 - Features not yet implemented will be tested when available.
+  
+## 11. Backend and Security Test Scenarios
+
+The following additional scenarios will be included in QA testing:
+
+| Test ID | Test Scenario | Expected Result |
+|---|---|---|
+| TC-20 | Student Answer Key Security | Students cannot view or access correct answer keys before or after submitting an answer. |
+| TC-21 | Invalid and Duplicate Class Joining | An invalid join code displays an appropriate error. Joining the same class twice does not create duplicate enrollment records. |
+| TC-22 | Unpublished Challenge Visibility | Unpublished challenges are not visible or accessible to students. |
+| TC-23 | Signed-Out User Access | Signed-out users cannot access class, challenge, or submission data. |
+| TC-24 | Written Answer Review | Written answers are not automatically graded, and teacher comments are visible to students when provided. |
+
+These scenarios will be tested using fictional demo accounts and data. Security tests will verify that access restrictions are enforced by the backend, not only by the user interface.
+
