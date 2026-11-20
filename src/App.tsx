@@ -4,6 +4,7 @@ import type { User } from '@supabase/supabase-js'
 import { AuthScreen } from './components/AuthScreen'
 import { ChallengeForm } from './components/ChallengeForm'
 import { DailyJourney } from './components/DailyJourney'
+import { DailyPrograms } from './components/DailyPrograms'
 import { DisplayModeControl } from './components/DisplayModeControl'
 import type { DisplayMode } from './components/DisplayModeControl'
 import { getSupabaseClient } from './lib/supabase'
@@ -90,19 +91,6 @@ function getGradeLabel(grade: string) {
   return `${number}${suffix}`
 }
 
-function getTeacherHubTitle(className?: string) {
-  if (!className) return 'Challenge Hub'
-  const grade = className.match(
-    /\bgrade\s+(kindergarten|k|1[0-2]|[1-9](?:st|nd|rd|th)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/i,
-  )?.[1]
-  const gradeName = grade
-    ? gradeNames[grade.toLowerCase().replace(/(?:st|nd|rd|th)$/, '')]
-    : null
-  return gradeName
-    ? `Grade ${gradeName} Challenge Hub`
-    : `${className} Challenge Hub`
-}
-
 type TeacherGradeBand = ClassGradeBand
 
 const teacherGradeBands: {
@@ -131,20 +119,26 @@ const teacherGradeBands: {
   },
 ]
 
-function getClassGradeBand(className: string): TeacherGradeBand | null {
+function getClassGrade(className: string): number | null {
   const grade = className.match(
-    /\b(?:grade\s+)?(kindergarten|k|1[0-2]|[1-9](?:st|nd|rd|th)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/i,
+    /\b(?:grade\s+)?(kindergarten|k|(?:1[0-2]|[1-9])(?:st|nd|rd|th)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/i,
   )?.[1]
   if (!grade) return null
   const normalized = grade.toLowerCase().replace(/(?:st|nd|rd|th)$/, '')
-  if (normalized === 'k' || normalized === 'kindergarten') return 'K-5'
-  const numericGrade =
+  if (normalized === 'k' || normalized === 'kindergarten') return 0
+  return (
     Number(normalized) ||
     Number(
       Object.entries(gradeNames).find(
         ([, name]) => name.toLowerCase() === normalized,
       )?.[0],
     )
+  )
+}
+
+function getClassGradeBand(className: string): TeacherGradeBand | null {
+  const numericGrade = getClassGrade(className)
+  if (numericGrade === null) return null
   if (numericGrade <= 5) return 'K-5'
   if (numericGrade <= 8) return '6-8'
   return '9-12'
@@ -155,7 +149,7 @@ function getBaseClassName(className: string) {
     .replace(/\s*(?:[-–]\s*)?Section\s+[A-C]$/i, '')
     .trim()
   const match = baseName.match(
-    /^(?:grade\s+)?(kindergarten|k|1[0-2]|[1-9](?:st|nd|rd|th)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(math|science|technology|engineering)$/i,
+    /^(?:grade\s+)?(kindergarten|k|(?:1[0-2]|[1-9])(?:st|nd|rd|th)?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(math|science|technology|engineering)$/i,
   )
   if (!match) return baseName.toLocaleLowerCase()
 
@@ -176,11 +170,20 @@ function getClassSection(className: string) {
   return className.match(/(?:[-–]\s*)?Section\s+([A-C])$/i)?.[1]?.toUpperCase()
 }
 
+function sortClassesByGrade(classRecords: ClassRecord[]) {
+  return [...classRecords].sort(
+    (left, right) =>
+      (getClassGrade(left.name) ?? Number.MAX_SAFE_INTEGER) -
+      (getClassGrade(right.name) ?? Number.MAX_SAFE_INTEGER),
+  )
+}
+
 function orderClasses(classRecords: ClassRecord[], teacherId: string) {
+  const gradeOrder = sortClassesByGrade(classRecords)
   const savedOrder = window.localStorage.getItem(
     `${classOrderStoragePrefix}${teacherId}`,
   )
-  if (!savedOrder) return classRecords
+  if (!savedOrder) return gradeOrder
 
   try {
     const orderedIds: unknown = JSON.parse(savedOrder)
@@ -188,18 +191,18 @@ function orderClasses(classRecords: ClassRecord[], teacherId: string) {
       !Array.isArray(orderedIds) ||
       !orderedIds.every((id) => typeof id === 'string')
     ) {
-      return classRecords
+      return gradeOrder
     }
     const orderIndex = new Map<string, number>(
       orderedIds.map((id: string, index: number) => [id, index]),
     )
-    return [...classRecords].sort(
+    return gradeOrder.sort(
       (left, right) =>
         (orderIndex.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
         (orderIndex.get(right.id) ?? Number.MAX_SAFE_INTEGER),
     )
   } catch {
-    return classRecords
+    return gradeOrder
   }
 }
 
@@ -307,6 +310,7 @@ function App() {
   const [selectedClassId, setSelectedClassId] = useState('')
   const [teacherGradeBand, setTeacherGradeBand] =
     useState<TeacherGradeBand | null>(null)
+  const [showAllClasses, setShowAllClasses] = useState(true)
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState('')
@@ -318,9 +322,11 @@ function App() {
   const [viewingSubmission, setViewingSubmission] =
     useState<Submission | null>(null)
   const [showChallengeForm, setShowChallengeForm] = useState(false)
-  const [teacherView, setTeacherView] = useState<'challenges' | 'progress'>(
+  const [showChallengeType, setShowChallengeType] = useState(false)
+  const [teacherView, setTeacherView] = useState<'challenges' | 'progress' | 'daily'>(
     'challenges',
   )
+  const [studentDailyView, setStudentDailyView] = useState(false)
   const [editingChallenge, setEditingChallenge] = useState<Challenge | null>(
     null,
   )
@@ -748,6 +754,7 @@ function App() {
     }
     setShowClassForm(false)
     setSelectedClassId(data.id)
+    setShowAllClasses(false)
     setTeacherView('challenges')
     setPageError('')
     setRefreshKey((key) => key + 1)
@@ -848,6 +855,22 @@ function App() {
       nextClasses[nextIndex],
       nextClasses[currentIndex],
     ]
+    setClasses(nextClasses)
+    window.localStorage.setItem(
+      `${classOrderStoragePrefix}${user.id}`,
+      JSON.stringify(nextClasses.map((classRecord) => classRecord.id)),
+    )
+  }
+
+  function resetClassOrder(band: TeacherGradeBand) {
+    if (!user || profile?.role !== 'teacher') return
+    const belongsToBand = (classRecord: ClassRecord) =>
+      (classRecord.grade_band ?? getClassGradeBand(classRecord.name)) === band
+    const orderedBandClasses = sortClassesByGrade(classes.filter(belongsToBand))
+    let index = 0
+    const nextClasses = classes.map((classRecord) =>
+      belongsToBand(classRecord) ? orderedBandClasses[index++] : classRecord,
+    )
     setClasses(nextClasses)
     window.localStorage.setItem(
       `${classOrderStoragePrefix}${user.id}`,
@@ -1153,7 +1176,7 @@ function App() {
             getClassGradeBand(classRecord.name)) === teacherGradeBand,
       )
     : []
-  const teacherHubTitle = getTeacherHubTitle(selectedClass?.name)
+  const showingTeacherClasses = isTeacher && teacherGradeBand && showAllClasses
   const currentDashboard =
     dashboard?.classId === selectedClass?.id ? dashboard : null
 
@@ -1168,9 +1191,11 @@ function App() {
           <strong>
             {isTeacher
               ? teacherGradeBand
-                ? teacherHubTitle
-                : 'Teacher launchpad'
-              : 'My challenges'}
+                ? showingTeacherClasses
+                  ? `${teacherGradeBand} classes`
+                  : selectedClass?.name ?? 'Classes'
+                : 'Grade groups'
+              : selectedClass?.name ?? 'My classes'}
           </strong>
         </div>
         <details className="account-menu account-menu-dropdown">
@@ -1231,17 +1256,15 @@ function App() {
           <p className="workspace-role">
             {isTeacher ? 'TEACHER WORKSPACE' : 'STUDENT WORKSPACE'}
           </p>
-          {(!isTeacher || teacherGradeBand) ? (
+          {(!isTeacher || (teacherGradeBand && !showAllClasses)) ? (
             <nav className="workspace-nav" aria-label="Workspace navigation">
               <button
-                aria-current={isTeacher && teacherView === 'challenges' ? 'page' : undefined}
-                className={`workspace-nav-item${!isTeacher || teacherView === 'challenges' ? ' is-active' : ''}`}
-                onClick={() => setTeacherView('challenges')}
+                aria-current={isTeacher ? teacherView === 'challenges' ? 'page' : undefined : !studentDailyView ? 'page' : undefined}
+                className={`workspace-nav-item${(isTeacher ? teacherView === 'challenges' : !studentDailyView) ? ' is-active' : ''}`}
+                onClick={() => isTeacher ? setTeacherView('challenges') : setStudentDailyView(false)}
               >
                 <span aria-hidden="true">{isTeacher ? '⚗' : '✳'}</span>
-                {isTeacher
-                  ? getTeacherHubTitle(selectedClass?.name)
-                  : 'My challenges'}
+                {isTeacher ? 'Challenges' : 'My challenges'}
               </button>
               {isTeacher ? (
               <>
@@ -1255,8 +1278,17 @@ function App() {
                 </button>
               </>
               ) : null}
+              <button
+                aria-current={(isTeacher ? teacherView === 'daily' : studentDailyView) ? 'page' : undefined}
+                className={`workspace-nav-item${(isTeacher ? teacherView === 'daily' : studentDailyView) ? ' is-active' : ''}`}
+                onClick={() => isTeacher ? setTeacherView('daily') : setStudentDailyView(true)}
+                type="button"
+              >
+                <span aria-hidden="true">◷</span>
+                Daily programs
+              </button>
             </nav>
-          ) : (
+          ) : !teacherGradeBand ? (
             <nav className="workspace-nav teacher-launchpad-nav" aria-label="Teacher navigation">
               <button
                 aria-current="page"
@@ -1267,7 +1299,7 @@ function App() {
                 Dashboard
               </button>
             </nav>
-          )}
+          ) : null}
           {(!isTeacher || teacherGradeBand) ? <div className="workspace-class-list">
             <p className="sidebar-label">
               {isTeacher
@@ -1283,9 +1315,15 @@ function App() {
                 : classes
             ).map((classRecord) => (
               <button
-                className={`class-link${selectedClassId === classRecord.id ? ' is-active' : ''}`}
+                className={`class-link${selectedClassId === classRecord.id && !showingTeacherClasses ? ' is-active' : ''}`}
                 key={classRecord.id}
-                onClick={() => setSelectedClassId(classRecord.id)}
+                onClick={() => {
+                  setSelectedClassId(classRecord.id)
+                  if (isTeacher) {
+                    setShowAllClasses(false)
+                    setShowClassMessageForm(false)
+                  }
+                }}
               >
                 <span className="class-dot" aria-hidden="true" />
                 <span>{classRecord.name}</span>
@@ -1313,9 +1351,6 @@ function App() {
             <strong>Small challenges. Big discoveries.</strong>
             <p>A little curiosity goes a long way.</p>
           </div>
-          <button className="sidebar-help" type="button">
-            <span aria-hidden="true">?</span> Help &amp; resources
-          </button>
           <div className="sidebar-note">
             <span className="note-icon" aria-hidden="true">
               i
@@ -1342,8 +1377,17 @@ function App() {
                 band={teacherGradeBand}
                 classes={teacherBandClasses}
                 selectedClassId={selectedClassId}
+                showAllClasses={showAllClasses}
                 showCreateForm={showClassForm}
-                onSelect={setSelectedClassId}
+                onSelect={(classId) => {
+                  setSelectedClassId(classId)
+                  setShowAllClasses(false)
+                }}
+                onShowAllClasses={() => {
+                  resetClassOrder(teacherGradeBand)
+                  setShowAllClasses(true)
+                  setShowClassMessageForm(false)
+                }}
                 onCopyCode={copyJoinCode}
                 onCreateClass={createClass}
                 onToggleCreateForm={() =>
@@ -1354,6 +1398,7 @@ function App() {
                   setTeacherGradeBand(null)
                   setSelectedClassId('')
                   setShowClassForm(false)
+                  setShowClassMessageForm(false)
                 }}
               />
             ) : (
@@ -1361,7 +1406,9 @@ function App() {
                 classes={classes}
                 teacherName={profile.display_name}
                 onChoose={(band) => {
+                  resetClassOrder(band)
                   setTeacherGradeBand(band)
+                  setShowAllClasses(true)
                   setShowClassForm(false)
                   setTeacherView('challenges')
                   const firstClass = classes.find(
@@ -1376,6 +1423,7 @@ function App() {
           ) : null}
           {isTeacher &&
           teacherGradeBand &&
+          !showAllClasses &&
           selectedClass &&
           showClassMessageForm ? (
             <ClassMessageEditor
@@ -1386,20 +1434,34 @@ function App() {
               onSave={saveClassMessage}
             />
           ) : null}
-          {selectedClass && (!isTeacher || teacherGradeBand) ? (
+          {selectedClass && (!isTeacher || (teacherGradeBand && !showAllClasses)) ? (
             <>
               <div className="page-heading workspace-page-heading">
                 <div>
                   <p className="eyebrow">
                     {isTeacher
-                      ? 'A WORKSHOP FOR CURIOUS MINDS'
-                      : 'YOUR LEARNING SPACE'}
+                      ? selectedClass.name
+                      : 'YOUR CLASS'}
                   </p>
-                  <h1>{isTeacher ? teacherHubTitle : 'Explore. Create. Discover.'}</h1>
+                  <h1>
+                    {isTeacher
+                      ? teacherView === 'challenges'
+                        ? 'Challenges'
+                        : teacherView === 'progress'
+                          ? 'Class progress'
+                          : 'Daily programs'
+                      : selectedClass.name}
+                  </h1>
                   <p className="page-subtitle">
                     {isTeacher
-                      ? 'Small experiments. Real discoveries. See what your class can do.'
-                      : 'Pick one challenge and give your curiosity room to grow.'}
+                      ? teacherView === 'challenges'
+                        ? 'Create and manage challenges for this class.'
+                        : teacherView === 'progress'
+                          ? 'Review student answers and track class progress.'
+                          : 'Create and manage scheduled daily programs.'
+                      : studentDailyView
+                        ? 'Complete your scheduled daily questions.'
+                        : 'Choose a challenge and submit your answer.'}
                   </p>
                 </div>
                 <div className="class-heading-actions">
@@ -1410,7 +1472,7 @@ function App() {
                           className="button button-primary create-challenge-button"
                           onClick={() => {
                             setEditingChallenge(null)
-                            setShowChallengeForm(true)
+                            setShowChallengeType(true)
                           }}
                         >
                           <span aria-hidden="true">+</span> Create a challenge
@@ -1437,7 +1499,7 @@ function App() {
                 </div>
               </div>
 
-              <section
+              {!((isTeacher && teacherView === 'daily') || (!isTeacher && studentDailyView)) ? <section
                 className={`class-greeting${isTeacher ? '' : ' class-greeting-student'}`}
                 aria-label={isTeacher ? 'Class overview' : 'Your learning journey'}
               >
@@ -1509,13 +1571,24 @@ function App() {
                     <small>challenges<br />to explore</small>
                   </div>
                 )}
-              </section>
+              </section> : null}
 
-              {isTeacher ? (
+              {(isTeacher ? teacherView === 'daily' : studentDailyView) ? (
+                currentDashboard ? <DailyPrograms
+                  key={selectedClass.id}
+                  supabase={supabase!}
+                  classId={selectedClass.id}
+                  userId={user.id}
+                  isTeacher={isTeacher}
+                  members={currentDashboard.members}
+                  refreshKey={refreshKey}
+                /> : <LoadingInline />
+              ) : isTeacher ? (
                 <TeacherDashboard
+                  key={selectedClass.id}
                   classRecord={selectedClass}
                   dashboard={currentDashboard}
-                  view={teacherView}
+                  view={teacherView === 'daily' ? 'challenges' : teacherView}
                   onViewChange={setTeacherView}
                   onDelete={deleteChallenge}
                   onEdit={(challenge) => {
@@ -1528,6 +1601,7 @@ function App() {
                 />
               ) : (
                 <StudentDashboard
+                  key={selectedClass.id}
                   dashboard={currentDashboard}
                   answerDrafts={answerDrafts}
                   answerFeedback={answerFeedback}
@@ -1545,12 +1619,44 @@ function App() {
         </section>
       </main>
 
+      {showChallengeType && selectedClass ? (
+        <div className="modal-backdrop" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setShowChallengeType(false)
+        }}>
+          <section aria-labelledby="challenge-type-title" aria-modal="true" className="modal-card" role="dialog">
+            <header className="modal-header">
+              <div><p className="eyebrow">CREATE FOR YOUR CLASS</p><h2 id="challenge-type-title">Choose a challenge type</h2></div>
+              <button aria-label="Close dialog" className="icon-button" onClick={() => setShowChallengeType(false)} type="button">×</button>
+            </header>
+            <div className="challenge-type-options">
+              <button className="button button-secondary" type="button" onClick={() => {
+                setShowChallengeType(false)
+                setTeacherView('daily')
+              }}>
+                <strong>Daily program</strong>
+                <span>Plan questions across scheduled days.</span>
+              </button>
+              <button className="button button-secondary" type="button" onClick={() => {
+                setShowChallengeType(false)
+                setShowChallengeForm(true)
+              }}>
+                <strong>Individual challenge</strong>
+                <span>Create 1–30 separate questions for this class.</span>
+              </button>
+            </div>
+            <p className="daily-program-hint">Test assessments are not available yet.</p>
+            <footer className="modal-actions"><button className="button button-secondary" onClick={() => setShowChallengeType(false)} type="button">Cancel</button></footer>
+          </section>
+        </div>
+      ) : null}
       {showChallengeForm && selectedClass ? (
         <ChallengeForm
           challenge={editingChallenge}
           classId={selectedClass.id}
-          onCancel={() => setShowChallengeForm(false)}
-          onError={setPageError}
+          onCancel={() => {
+            setShowChallengeForm(false)
+            setRefreshKey((key) => key + 1)
+          }}
           onSaved={() => {
             setShowChallengeForm(false)
             setRefreshKey((key) => key + 1)
@@ -1819,12 +1925,17 @@ function TeacherDashboard({
           </div>
         ) : (
           visibleChallenges.length === 0 &&
-          (challengeFilter === 'drafts' && draftChallenges.length === 0 ? (
+          (query.trim() ? (
+            <div className="empty-state compact-empty">
+              <h2>No matching challenges</h2>
+              <p>Try a different search or choose another challenge filter.</p>
+            </div>
+          ) : challengeFilter === 'drafts' && draftChallenges.length === 0 ? (
             <div className="empty-state compact-empty">
               <h2>No drafts yet</h2>
               <p>Use Create a challenge above and save it as a draft to finish later.</p>
             </div>
-          ) : challengeFilter === 'completed' ? (
+          ) : challengeFilter === 'completed' && completedChallenges.length === 0 ? (
             <div className="empty-state compact-empty">
               <h2>No completed challenges yet</h2>
               <p>
@@ -1887,8 +1998,8 @@ function StudentDashboard({
         <span className="empty-illustration" aria-hidden="true">
           ✳
         </span>
-        <h2>Your discovery space is getting ready</h2>
-        <p>Your teacher will add a challenge soon. Your next big idea is just around the corner!</p>
+        <h2>No challenges yet</h2>
+        <p>Your teacher has not published any challenges for this class yet.</p>
       </div>
     )
   }
@@ -2124,11 +2235,19 @@ function StudentDashboard({
         </div>
       ) : (
         <div className="empty-state compact-empty">
-          <h2>{filter === 'todo' ? 'All caught up!' : 'Nothing here yet'}</h2>
+          <h2>
+            {query.trim()
+              ? 'No matching challenges'
+              : filter === 'todo'
+                ? 'All caught up!'
+                : 'No submitted answers yet'}
+          </h2>
           <p>
-            {filter === 'todo'
+            {query.trim()
+              ? 'Try a different search or choose another filter.'
+              : filter === 'todo'
               ? 'You have submitted an answer for every challenge in this class.'
-              : 'Challenges you submit will appear here.'}
+              : 'Challenges you have answered will appear here.'}
           </p>
         </div>
       )}
@@ -2604,7 +2723,7 @@ function TeacherBandChooser({
           <section className="teacher-mission-launch">
             <p className="teacher-mission-kicker">TEACHER DASHBOARD</p>
             <h1 id="teacher-band-title">Choose a grade group</h1>
-            <p>Open a group to view or create classes, then select a class to manage its challenges.</p>
+            <p>Choose a group to find or create a class, then add challenges and share its join code.</p>
           </section>
           <section
             aria-labelledby="teacher-groups-title"
@@ -2613,9 +2732,8 @@ function TeacherBandChooser({
             <header>
               <div>
                 <p className="eyebrow">YOUR CLASSROOMS</p>
-                <h2 id="teacher-groups-title">Your grade groups</h2>
+                <h2 id="teacher-groups-title">Grade groups</h2>
               </div>
-              <span>Choose a group to view its classes</span>
             </header>
             <div className="teacher-band-grid">
               {classCounts.map((band) => (
@@ -2686,8 +2804,10 @@ function TeacherClassOverview({
   band,
   classes,
   selectedClassId,
+  showAllClasses,
   showCreateForm,
   onSelect,
+  onShowAllClasses,
   onCopyCode,
   onCreateClass,
   onToggleCreateForm,
@@ -2697,15 +2817,16 @@ function TeacherClassOverview({
   band: TeacherGradeBand
   classes: ClassRecord[]
   selectedClassId: string
+  showAllClasses: boolean
   showCreateForm: boolean
   onSelect: (classId: string) => void
+  onShowAllClasses: () => void
   onCopyCode: (joinCode: string) => void
   onCreateClass: (event: FormEvent<HTMLFormElement>) => void
   onToggleCreateForm: () => void
   onMoveClass: (classId: string, direction: -1 | 1) => void
   onChangeBand: () => void
 }) {
-  const [showAllClasses, setShowAllClasses] = useState(false)
   const [selectedGrade, setSelectedGrade] = useState(
     band === 'K-5' ? '5' : band === '6-8' ? '6' : '9',
   )
@@ -2767,15 +2888,17 @@ function TeacherClassOverview({
       <header className="teacher-class-overview-heading">
         <div>
           <p className="eyebrow">YOUR CLASSROOMS</p>
-          <h2 id="teacher-classes-title">
-            {selectedClass && !showAllClasses
-              ? 'Current class'
-              : 'Your classes'}
-          </h2>
+          {selectedClass && !showAllClasses ? (
+            <h2 id="teacher-classes-title">Current class</h2>
+          ) : (
+            <h1 id="teacher-classes-title">{band} classes</h1>
+          )}
           <p>
             {selectedClass && !showAllClasses
               ? 'Your open class and its student join code.'
-              : 'Choose a class to open its challenge hub and share its join code.'}
+              : classes.length
+                ? 'Select a class to manage its challenges and share its join code.'
+                : 'Create a class to get started.'}
           </p>
         </div>
         <div className="teacher-class-overview-actions">
@@ -2784,15 +2907,15 @@ function TeacherClassOverview({
             onClick={onChangeBand}
             type="button"
           >
-            Change grade band
+            Change grade group
           </button>
-          {classes.length > 1 ? (
+          {classes.length > 1 && !showAllClasses ? (
             <button
               className="button button-secondary teacher-all-classes-button"
-              onClick={() => setShowAllClasses((shown) => !shown)}
+              onClick={onShowAllClasses}
               type="button"
             >
-              {showAllClasses ? 'Current class only' : 'All classes'}
+              All classes
             </button>
           ) : null}
           <button
@@ -2910,7 +3033,7 @@ function TeacherClassOverview({
       {classes.length ? (
         <div className="teacher-class-grid">
           {visibleClasses.map((classRecord) => {
-            const selected = classRecord.id === selectedClassId
+            const selected = !showAllClasses && classRecord.id === selectedClassId
             const index = classes.findIndex(
               (item) => item.id === classRecord.id,
             )
@@ -2922,10 +3045,7 @@ function TeacherClassOverview({
                 <button
                   aria-pressed={selected}
                   className="teacher-class-select"
-                  onClick={() => {
-                    onSelect(classRecord.id)
-                    setShowAllClasses(false)
-                  }}
+                  onClick={() => onSelect(classRecord.id)}
                   type="button"
                 >
                   <span className="teacher-class-card-label">
@@ -2933,7 +3053,7 @@ function TeacherClassOverview({
                   </span>
                   <strong>{classRecord.name}</strong>
                   <span>
-                    {getTeacherHubTitle(classRecord.name)}
+                    View challenges and progress
                   </span>
                 </button>
                 <div className="teacher-class-code">

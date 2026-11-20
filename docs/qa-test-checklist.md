@@ -22,7 +22,7 @@
 | TC-04 | Create Class | Sign in as a teacher and create a class. | Class is created successfully. | | Not Tested | |
 | TC-05 | Join Class | Enter a valid class join code as a student. | Student joins the correct class. | | Not Tested | |
 | TC-06 | Invalid Join Code | Enter an incorrect class code. | An error appears and the student does not join a class. | | Not Tested | |
-| TC-07 | Create Challenge | Create a challenge as a teacher. | Challenge is saved successfully. | | Not Tested | |
+| TC-07 | Create Challenge | Choose two individual challenges, save one multiple-choice question and one short-answer question. Repeat and cancel after saving the first. | Each challenge is saved separately; cancelling preserves the one already saved. | | Not Tested | |
 | TC-08 | Edit Challenge | Edit an existing challenge. | Updated information is displayed. | | Not Tested | |
 | TC-09 | Delete Challenge | Delete a challenge as a teacher. | Challenge is removed successfully. | | Not Tested | |
 | TC-10 | View Challenges | Open the student challenge page. | Published challenges for the student's class appear. | | Not Tested | |
@@ -35,6 +35,13 @@
 | TC-17 | Responsive Design | Open the website on phone, tablet and laptop. | Website displays correctly on all devices. | | Not Tested | |
 | TC-18 | Browser Compatibility | Open the website using Chrome and Safari. | Website works correctly in both browsers. | | Not Tested | |
 | TC-19 | Public Vercel Link | Open the public Vercel URL in a browser. | Website opens successfully and loads without errors. | | Not Tested | |
+| TC-20 | Teacher navigation | Open a grade group, select a class, and switch between Challenges and Class progress. Return to all classes and select another class. | The group list is labeled with its grade group; the selected class and current page are clear, and each class shows its own data. | | Not Tested | |
+| TC-21 | Student navigation | Join a class with its code, then switch between enrolled classes. Search for a challenge that does not exist. | The selected class name and its challenges are shown; an unmatched search suggests changing the search or filter. | | Not Tested | |
+| TC-22 | Account role | Open sign-in, then select Create an account. | Role choices are shown; sign-in uses the account's existing role and sign-up uses the selected role. | | Not Tested | |
+| TC-23 | Class order | In a grade group with several classes, move a class with the arrows, open a class, and select All classes. Also reopen the grade group. | The arrows allow a custom order; reopening the list restores grade order without changing other grade groups. | | Not Tested | |
+| TC-24 | Daily program setup | As a teacher, create a daily plan, add 1–10 questions per day with the planned difficulty totals, and publish it. | The plan shows its schedule and question counts; publishing succeeds only when each day and total is valid. | | Not Tested | |
+| TC-25 | Daily program student flow | As an enrolled student, open a published program before and after a day's scheduled opening, then answer its questions. | Future questions remain unavailable; unlocked questions accept answers and show feedback and progress. | | Not Tested | |
+| TC-26 | Daily program review | As a teacher, review a student's short answer and view their progress and streak. Try editing the program after an answer. | The review and progress appear correctly; edits after answers are blocked. | | Not Tested | |
 
 ## Bug Reporting
 
@@ -51,7 +58,7 @@ If a test fails, record the following information in Asana:
 
 ## Testing Summary
 
-- Total test cases: 19
+- Total test cases: 26
 - Passed:
 - Failed:
 - Not tested:

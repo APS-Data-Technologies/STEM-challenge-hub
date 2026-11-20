@@ -89,8 +89,9 @@ Every tool is free or on a free tier.
 ```
 
 - **Answer feedback.** Multiple-choice answer keys live in a separate `challenge_keys` table that students can't read. The database checks multiple-choice answers immediately. Short answers are saved for teacher review, and students can see the result after the teacher evaluates them.
+- **Individual challenges.** Teachers can choose to create 1–30 separate challenges in sequence, choosing the answer type and publication status for each. Each is saved before the next; cancelling leaves already saved challenges in the class. Multiple choice requires 2–6 unique choices, entered one per line.
 - **Joining a class** goes through the `join_class(code)` function, because students can't read a class before they join it.
-- **Classroom workflow.** A teacher selects a grade group, creates a class and shares its join code. A student joins using the code and sees its published challenges and class message. The teacher can review submissions in **Class progress**.
+- **Classroom workflow.** A teacher selects a grade group, opens or creates a class, and shares its join code. Classes are listed by grade unless reordered using the arrows; custom order is saved in that browser. In that class, **Challenges** manages its challenges and **Class progress** shows student submissions. A student enters the code under **Join a class**, selects a class in the sidebar, and submits answers to its published challenges. The selected class name appears at the top of the workspace.
 - **Updates from other users.** Select **Refresh class** to reload classroom data, or return to the browser tab after working elsewhere. Changes made in another session are not pushed live to an already-open page.
 
 ## Getting started
@@ -193,6 +194,8 @@ Supabase / Postgres. Row-level security (RLS) is **on for every table**.
 
 - `join_class(code)`: adds the signed-in student to the class with that code. A wrong code returns an error; joining twice does nothing.
 - `submit_answer(challenge_id, answer)`: saves or replaces the student's response. Multiple-choice answers are checked against the protected answer key in the database and return correct/incorrect feedback; short answers remain ungraded until a teacher evaluates them.
+
+The daily-program flow requires [`supabase/09_daily_programs.sql`](./supabase/09_daily_programs.sql) in addition to the base schema and security scripts. Teachers can create multiple programs per class, plan the difficulty totals and schedule, add 1–10 questions per day, publish, and review student progress and short answers. Students can answer unlocked questions and see their streak. Programs must be unpublished to change questions; after a student answers, the program is locked against edits. Test the migration locally with `npm run test:daily-db`. The separate test-assessment feature is not yet implemented.
 
 For a new Supabase project, run `01_schema.sql`, `02_security.sql`, `03_seed.sql`, and `05_scope_multiple_choice_feedback.sql` in that order; the base schema includes class message fields, daily challenge fields, and class grade bands. `04_teacher_evaluation.sql` is a historical migration and is not needed for new installs. For an existing project, run `06_class_messages.sql` to add class message fields, `07_daily_challenges.sql` to add the daily challenge program (day 1–100 and Easy/Medium/Hard level), and `08_class_grade_bands.sql` to add and backfill teacher class grade bands. These migrations can be safely rerun if needed. Run `05_scope_multiple_choice_feedback.sql` only if the project has not already applied it; it recalculates multiple-choice results from protected answer keys and limits teacher evaluations to short-answer submissions. Do not run `04_teacher_evaluation.sql` again on an existing project because it clears submission results.
 

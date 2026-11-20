@@ -4,11 +4,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type {
   AnswerType,
   Challenge,
-  DailyLevel,
   GradeBand,
   Subject,
 } from '../lib/types'
-import { dailyLevels } from '../lib/daily'
 const subjects: Subject[] = [
   'Science',
   'Technology',
@@ -21,14 +19,12 @@ export function ChallengeForm({
   challenge,
   classId,
   onCancel,
-  onError,
   onSaved,
   supabase,
 }: {
   challenge: Challenge | null
   classId: string
   onCancel: () => void
-  onError: (message: string) => void
   onSaved: () => void
   supabase: SupabaseClient
 }) {
@@ -39,7 +35,11 @@ export function ChallengeForm({
     challenge?.choices?.join('\n') ?? '',
   )
   const [keyAnswer, setKeyAnswer] = useState('')
-  const [isDaily, setIsDaily] = useState(challenge?.program_day != null)
+  const [count, setCount] = useState(1)
+  const [total, setTotal] = useState<number | null>(challenge ? 1 : null)
+  const [current, setCurrent] = useState(1)
+  const [pendingChallengeId, setPendingChallengeId] = useState<string | null>(null)
+  const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export function ChallengeForm({
       .then(({ data, error }) => {
         if (!active) return
         if (error) {
-          onError(error.message)
+          setError(error.message)
           return
         }
         setKeyAnswer(data.correct_choice)
@@ -61,31 +61,19 @@ export function ChallengeForm({
     return () => {
       active = false
     }
-  }, [challenge, onError, supabase])
+  }, [challenge, supabase])
 
   async function saveChallenge(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    onError('')
+    setError('')
     setPending(true)
-    const formData = new FormData(event.currentTarget)
+    const form = event.currentTarget
+    const formData = new FormData(form)
     const title = String(formData.get('title') ?? '').trim()
     const prompt = String(formData.get('prompt') ?? '').trim()
     const subject = String(formData.get('subject') ?? '') as Subject
     const gradeBand = String(formData.get('gradeBand') ?? '') as GradeBand
     const isPublished = formData.get('isPublished') === 'on'
-    const programDay = isDaily ? Number(formData.get('programDay')) : null
-    const level = isDaily ? (String(formData.get('level') ?? '') as DailyLevel) : null
-    if (
-      isDaily &&
-      (!Number.isInteger(programDay) ||
-        programDay! < 1 ||
-        programDay! > 100 ||
-        !dailyLevels.includes(level!))
-    ) {
-      onError('Choose a day from 1 to 100 and a level for the daily challenge.')
-      setPending(false)
-      return
-    }
     const choices =
       answerType === 'multiple_choice'
         ? choiceText
@@ -107,7 +95,7 @@ export function ChallengeForm({
         hasDuplicateChoices ||
         !choices.includes(correctChoice))
     ) {
-      onError(
+      setError(
         'Add 2–6 unique choices and select one as the correct answer.',
       )
       setPending(false)
@@ -122,19 +110,21 @@ export function ChallengeForm({
       grade_band: gradeBand,
       answer_type: answerType,
       choices,
-      is_published: isPublished,
-      program_day: programDay,
-      level,
+      is_published: false,
+      program_day: challenge?.program_day ?? null,
+      level: challenge?.level ?? null,
     }
 
+    let savedDraft = false
     try {
-      let challengeId = challenge?.id
+      let challengeId = challenge?.id ?? pendingChallengeId
       if (challengeId) {
         const { error } = await supabase
           .from('challenges')
           .update(challengeData)
           .eq('id', challengeId)
         if (error) throw error
+        savedDraft = true
       } else {
         const { data, error } = await supabase
           .from('challenges')
@@ -143,6 +133,8 @@ export function ChallengeForm({
           .single()
         if (error) throw error
         challengeId = data.id
+        setPendingChallengeId(challengeId)
+        savedDraft = true
       }
 
       if (answerType === 'multiple_choice') {
@@ -154,30 +146,41 @@ export function ChallengeForm({
           { onConflict: 'challenge_id' },
         )
         if (error) throw error
-      } else if (challenge?.answer_type === 'multiple_choice') {
+      } else if (challenge || pendingChallengeId) {
         const { error } = await supabase
           .from('challenge_keys')
           .delete()
-          .eq('challenge_id', challenge.id)
+          .eq('challenge_id', challengeId)
         if (error) throw error
       }
 
-      onSaved()
+      if (isPublished) {
+        const { error } = await supabase
+          .from('challenges')
+          .update({ is_published: true })
+          .eq('id', challengeId)
+        if (error) throw error
+      }
+
+      if (challenge || current === total) {
+        onSaved()
+      } else {
+        form.reset()
+        setChoiceText('')
+        setKeyAnswer('')
+        setAnswerType('multiple_choice')
+        setPendingChallengeId(null)
+        setCurrent((value) => value + 1)
+      }
     } catch (saveError) {
-      const code =
-        typeof saveError === 'object' && saveError !== null && 'code' in saveError
-          ? saveError.code
-          : undefined
-      onError(
-        code === '23505'
-          ? `Day ${programDay} ${level} already has a challenge in this class. Choose another day or level.`
-          : typeof saveError === 'object' &&
-              saveError !== null &&
-              'message' in saveError &&
-              typeof saveError.message === 'string'
-            ? saveError.message
-            : 'Could not save this challenge.',
-      )
+      const message = typeof saveError === 'object' &&
+        saveError !== null && 'message' in saveError &&
+        typeof saveError.message === 'string'
+        ? saveError.message
+        : 'Could not save this challenge.'
+      setError(savedDraft
+        ? `The challenge was saved as a draft but could not be completed. Retry to finish saving it. ${message}`
+        : message)
     } finally {
       setPending(false)
     }
@@ -187,7 +190,7 @@ export function ChallengeForm({
     <div
       className="modal-backdrop"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onCancel()
+        if (!pending && event.target === event.currentTarget) onCancel()
       }}
     >
       <section
@@ -202,20 +205,43 @@ export function ChallengeForm({
               {challenge ? 'MAKE AN UPDATE' : 'SPARK SOME CURIOSITY'}
             </p>
             <h2 id="challenge-form-title">
-              {challenge ? 'Edit challenge' : 'New challenge'}
+              {challenge ? 'Edit challenge' : total === null ? 'Create individual challenges' : `Challenge ${current} of ${total}`}
             </h2>
           </div>
           <button
             aria-label="Close dialog"
             className="icon-button"
             onClick={onCancel}
+            disabled={pending}
             type="button"
           >
             ×
           </button>
         </header>
 
-        <form className="challenge-form" onSubmit={saveChallenge}>
+        {error ? <div className="notice notice-error" role="alert">{error}</div> : null}
+        {total === null ? (
+          <form key="count" className="challenge-form" onSubmit={(event) => {
+            event.preventDefault()
+            if (!Number.isInteger(count) || count < 1 || count > 30) {
+              setError('Choose a number from 1 to 30.')
+              return
+            }
+            setError('')
+            setTotal(count)
+          }}>
+            <label className="field-label">
+              Number of challenges
+              <input type="number" min={1} max={30} required value={count} onChange={(event) => setCount(Number(event.target.value))} />
+            </label>
+            <p className="field-hint">Enter and save each challenge separately. Saved challenges remain if you cancel.</p>
+            <footer className="modal-actions">
+              <button className="button button-secondary" onClick={onCancel} type="button">Cancel</button>
+              <button className="button button-primary" type="submit">Continue</button>
+            </footer>
+          </form>
+        ) : (
+        <form key="challenge" className="challenge-form" onSubmit={saveChallenge}>
           <label className="field-label">
             Challenge title
             <input
@@ -284,7 +310,7 @@ export function ChallengeForm({
           {answerType === 'multiple_choice' ? (
             <>
               <label className="field-label">
-                Answer choices (2–6, one per line)
+                Answer choices
                 <textarea
                   onChange={(event) => {
                     setChoiceText(event.target.value)
@@ -332,47 +358,6 @@ export function ChallengeForm({
               </label>
             </>
           ) : null}
-          <fieldset className="daily-fieldset">
-            <label className="publish-toggle">
-              <input
-                checked={isDaily}
-                onChange={(event) => setIsDaily(event.target.checked)}
-                type="checkbox"
-              />
-              <span>
-                <strong>Daily challenge</strong>
-                <small>
-                  Add this to the class's 1–100 day program with a level.
-                  Students earn badges and streaks.
-                </small>
-              </span>
-            </label>
-            {isDaily ? (
-              <div className="form-grid">
-                <label className="field-label">
-                  Day (1–100)
-                  <input
-                    defaultValue={challenge?.program_day ?? 1}
-                    max={100}
-                    min={1}
-                    name="programDay"
-                    required
-                    type="number"
-                  />
-                </label>
-                <label className="field-label">
-                  Level
-                  <select defaultValue={challenge?.level ?? 'Easy'} name="level">
-                    {dailyLevels.map((level) => (
-                      <option key={level} value={level}>
-                        {level}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            ) : null}
-          </fieldset>
           <label className="publish-toggle">
             <input
               defaultChecked={challenge?.is_published ?? false}
@@ -388,6 +373,7 @@ export function ChallengeForm({
             <button
               className="button button-secondary"
               onClick={onCancel}
+              disabled={pending}
               type="button"
             >
               Cancel
@@ -397,10 +383,11 @@ export function ChallengeForm({
               disabled={pending}
               type="submit"
             >
-              {pending ? 'Saving...' : challenge ? 'Save changes' : 'Create challenge'}
+              {pending ? 'Saving...' : challenge ? 'Save changes' : current < total ? 'Save and next' : 'Create challenge'}
             </button>
           </footer>
         </form>
+        )}
       </section>
     </div>
   )
