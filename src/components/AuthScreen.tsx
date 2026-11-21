@@ -12,6 +12,7 @@ export function AuthScreen({
   supabase,
   error,
   onError,
+  onSignInRoleChange,
   displayMode,
   onDisplayModeChange,
   readAloudEnabled,
@@ -22,6 +23,7 @@ export function AuthScreen({
   supabase: SupabaseClient
   error: string
   onError: (message: string) => void
+  onSignInRoleChange?: (role: UserRole | null) => void
   displayMode: DisplayMode
   onDisplayModeChange: (mode: DisplayMode) => void
   readAloudEnabled: boolean
@@ -67,11 +69,15 @@ export function AuthScreen({
       }
 
       if (mode === 'signin') {
+        onSignInRoleChange?.(role)
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
-        if (signInError) throw signInError
+        if (signInError) {
+          onSignInRoleChange?.(null)
+          throw signInError
+        }
         if (rememberEmail) {
           window.localStorage.setItem(rememberedEmailStorageKey, email)
         } else {
@@ -96,6 +102,7 @@ export function AuthScreen({
         }
       }
     } catch (submitError) {
+      if (mode === 'signin' && !recovery) onSignInRoleChange?.(null)
       onError(
         submitError instanceof Error
           ? submitError.message
@@ -268,6 +275,7 @@ export function AuthScreen({
                         <button
                           aria-pressed={role === nextRole}
                           className={role === nextRole ? 'is-selected' : ''}
+                          disabled={pending}
                           key={nextRole}
                           onClick={() => setRole(nextRole)}
                           type="button"
@@ -278,7 +286,7 @@ export function AuthScreen({
                     </div>
                     {mode === 'signin' ? (
                       <span className="auth-role-hint">
-                        Your account opens the workspace assigned to it.
+                        Select the role associated with your account.
                       </span>
                     ) : null}
                   </fieldset>
@@ -368,6 +376,7 @@ export function AuthScreen({
               <p className="auth-account-switch">
                 {mode === 'signin' ? 'New here?' : 'Already have an account?'}{' '}
                 <button
+                  disabled={pending}
                   onClick={() => {
                     setMode(mode === 'signin' ? 'signup' : 'signin')
                     onError('')

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { AuthScreen } from './components/AuthScreen'
@@ -17,6 +17,7 @@ import type {
   DashboardData,
   Profile,
   Submission,
+  UserRole,
 } from './lib/types'
 import './App.css'
 
@@ -297,6 +298,7 @@ function App() {
     [],
   )
   const [user, setUser] = useState<User | null>(null)
+  const expectedSignInRole = useRef<UserRole | null>(null)
   const [displayMode, setDisplayMode] = useState<DisplayMode>(getSavedDisplayMode)
   const [readAloudEnabled, setReadAloudEnabled] = useState(
     getSavedReadAloudPreference,
@@ -499,6 +501,7 @@ function App() {
       if (event === 'SIGNED_OUT') {
         setPasswordRecovery(false)
         setTeacherGradeBand(null)
+        expectedSignInRole.current = null
       }
       setUser(currentUser)
       setProfileLoading(Boolean(currentUser))
@@ -518,21 +521,42 @@ function App() {
     }
 
     let active = true
-    void supabase
-      .from('profiles')
-      .select('id, role, display_name')
-      .eq('id', user.id)
-      .single()
-      .then(({ data, error }) => {
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, role, display_name')
+          .eq('id', user.id)
+          .single()
         if (!active) return
         if (error) {
           setPageError(error.message)
           setProfileLoading(false)
           return
         }
-        setProfile(data as Profile)
+        const nextProfile = data as Profile
+        const expectedRole = expectedSignInRole.current
+        if (expectedRole && nextProfile.role !== expectedRole) {
+          const { error: signOutError } = await supabase.auth.signOut()
+          if (signOutError) {
+            setPageError(`The account role does not match your selection, and sign-out failed: ${signOutError.message}`)
+            setProfileLoading(false)
+          } else {
+            expectedSignInRole.current = null
+            setPageError(`This account is not a ${expectedRole} account. Select the correct role and try again.`)
+          }
+          return
+        }
+        expectedSignInRole.current = null
+        setProfile(nextProfile)
         setProfileLoading(false)
-      })
+      } catch (loadError) {
+        if (active) {
+          setPageError(errorMessage(loadError))
+          setProfileLoading(false)
+        }
+      }
+    })()
 
     return () => {
       active = false
@@ -1140,6 +1164,7 @@ function App() {
         supabase={supabase!}
         error={pageError}
         onError={setPageError}
+        onSignInRoleChange={(role) => { expectedSignInRole.current = role }}
         displayMode={displayMode}
         onDisplayModeChange={setDisplayMode}
         readAloudEnabled={readAloudEnabled}

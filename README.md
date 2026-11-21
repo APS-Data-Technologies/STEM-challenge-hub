@@ -40,7 +40,7 @@ Teachers want quick ways to give hands-on practice (a math puzzle, a science pre
 
 | # | Feature | What it does |
 |---|---------|--------------|
-| 1 | **Sign in with two roles** | Teacher and student accounts with email password recovery. Teachers choose a grade group on their dashboard; students land on *My challenges*. Students can't open teacher pages. |
+| 1 | **Sign in with two roles** | Teacher and student accounts with email password recovery. Select the account's role when signing in or creating an account. Teachers choose a grade group on their dashboard; students land on *My challenges*. Students can't open teacher pages. |
 | 2 | **Create a challenge** | Teachers create, edit and delete challenges with a subject (Science, Technology, Engineering, Math), grade band and answer type (multiple choice or short answer). |
 | 3 | **Join a class** | Each class gets a unique ~6-character join code. Students enter it to see that class's challenges. |
 | 4 | **Submit answers** | Students get immediate correct/try-again feedback for multiple-choice answers. Short answers are saved for teacher review. |
