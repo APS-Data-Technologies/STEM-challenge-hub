@@ -26,42 +26,44 @@ export function AuthIllustration() {
   const [showEngineeringRocket, setShowEngineeringRocket] = useState(false)
   const [showScienceMicroscope, setShowScienceMicroscope] = useState(false)
   const [showTechnologyLaptop, setShowTechnologyLaptop] = useState(false)
+  const [manualCards, setManualCards] = useState({ science: false, technology: false, engineering: false, maths: false })
+  const [cardCaption, setCardCaption] = useState('')
   const caption =
     stemSequenceStep !== null
       ? `${stemSubjects[stemSequenceStep].letter} — ${stemSubjects[stemSequenceStep].subject}`
-      : chemistryActive
-        ? 'Chemistry experiment ready! Click the flask to reset it.'
-        : biologyActive
-          ? 'Biology in motion! Click the cell to pause it.'
-          : 'Tap the robot to see S—Science, T—Technology, E—Engineering, M—Maths!'
+      : cardCaption || 'Tap a STEM card to explore, or tap the robot to see S—T—E—M!'
 
   useEffect(() => {
+    if (manualCards.maths) return
     const timer = window.setInterval(() => {
       setEquationIndex((index) => (index + 1) % equations.length)
     }, 2400)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [manualCards.maths])
 
   useEffect(() => {
+    if (manualCards.science) return
     const timer = window.setInterval(() => {
       setShowScienceMicroscope((showMicroscope) => !showMicroscope)
     }, 1800)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [manualCards.science])
 
   useEffect(() => {
+    if (manualCards.technology) return
     const timer = window.setInterval(() => {
       setShowTechnologyLaptop((showLaptop) => !showLaptop)
     }, 2600)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [manualCards.technology])
 
   useEffect(() => {
+    if (manualCards.engineering) return
     const timer = window.setInterval(() => {
       setShowEngineeringRocket((showRocket) => !showRocket)
     }, 3400)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [manualCards.engineering])
 
   useEffect(() => {
     if (!robotGiggles) return
@@ -80,8 +82,42 @@ export function AuthIllustration() {
   }, [stemSequenceStep])
 
   function playStemSequence() {
+    setCardCaption('')
     setRobotGiggles(true)
     setStemSequenceStep(0)
+  }
+
+  function exploreCard(card: 'science' | 'technology' | 'engineering' | 'maths') {
+    setStemSequenceStep(null)
+    setRobotGiggles(false)
+    setManualCards((current) => ({ ...current, [card]: true }))
+    if (card === 'science') {
+      setShowScienceMicroscope((current) => !current)
+      setCardCaption('Science: explore the planet and the microscope. Tap again to switch.')
+    } else if (card === 'technology') {
+      setShowTechnologyLaptop((current) => !current)
+      setCardCaption('Technology: explore the gear and the laptop. Tap again to switch.')
+    } else if (card === 'engineering') {
+      setShowEngineeringRocket((current) => !current)
+      setCardCaption('Engineering: explore the flying car and the rocket. Tap again to switch.')
+    } else {
+      setEquationIndex((current) => (current + 1) % equations.length)
+      setCardCaption('Maths: tap again to see another problem.')
+    }
+  }
+
+  function toggleBiology() {
+    setStemSequenceStep(null)
+    setRobotGiggles(false)
+    setCardCaption(biologyActive ? 'Biology: tap the cell to change its colors again.' : 'Biology in motion! Tap the cell to reset its colors.')
+    setBiologyActive((active) => !active)
+  }
+
+  function toggleChemistry() {
+    setStemSequenceStep(null)
+    setRobotGiggles(false)
+    setCardCaption(chemistryActive ? 'Chemistry: the flask is reset. Tap to experiment again.' : 'Chemistry experiment ready! Tap the flask to reset it.')
+    setChemistryActive((active) => !active)
   }
 
   function activateWithKeyboard(
@@ -152,9 +188,9 @@ export function AuthIllustration() {
         </g>
 
         <g transform="translate(255 -87)">
-          <g className={`auth-stem-card auth-planet-card${stemSequenceStep === 0 ? ' is-sequence-active' : ''}`} aria-label="Science">
+          <g className={`auth-stem-card auth-interactive-card auth-planet-card${stemSequenceStep === 0 ? ' is-sequence-active' : ''}`} aria-label="Science: switch between the planet and microscope" onClick={() => exploreCard('science')} onKeyDown={(event) => activateWithKeyboard(event, () => exploreCard('science'))} role="button" tabIndex={0}>
             <circle cx="195" cy="187" r="78" fill="#2CD7F2" fillOpacity=".2" />
-            <rect x="135" y="127" width="120" height="120" rx="30" fill="#E5FCFF" stroke="#69DDF0" strokeWidth="3" />
+            <rect className="auth-stem-card-bg" x="135" y="127" width="120" height="120" rx="30" fill="#E5FCFF" stroke="#69DDF0" strokeWidth="3" />
             <g className={`auth-cycle-image${showScienceMicroscope ? '' : ' is-visible'}`} aria-hidden="true">
               <circle cx="195" cy="180" r="33" fill="url(#auth-planet)" />
               <path d="M174 178c9-9 18-8 26-2 8 4 15 4 22-1m-40 15c8-6 15-6 23-1" fill="none" stroke="#C8FF58" strokeWidth="5" strokeLinecap="round" />
@@ -171,9 +207,9 @@ export function AuthIllustration() {
         </g>
 
         <g transform="translate(363 195)">
-          <g className={`auth-stem-card auth-rocket-card${stemSequenceStep === 2 ? ' is-sequence-active' : ''}`} aria-label="Engineering: flying electric car">
+          <g className={`auth-stem-card auth-interactive-card auth-rocket-card${stemSequenceStep === 2 ? ' is-sequence-active' : ''}`} aria-label="Engineering: switch between the flying car and rocket" onClick={() => exploreCard('engineering')} onKeyDown={(event) => activateWithKeyboard(event, () => exploreCard('engineering'))} role="button" tabIndex={0}>
             <circle cx="397" cy="105" r="70" fill="#FF6795" fillOpacity=".18" />
-            <rect x="341" y="49" width="112" height="112" rx="29" fill="#FFF0F4" stroke="#FF91AE" strokeWidth="3" />
+            <rect className="auth-stem-card-bg" x="341" y="49" width="112" height="112" rx="29" fill="#FFF0F4" stroke="#FF91AE" strokeWidth="3" />
             <g className={`auth-engineering-vehicle${showEngineeringRocket ? '' : ' is-visible'}`} aria-hidden="true">
               <g transform="translate(397 101) scale(1.08) translate(-397 -101)">
                 <path d="M354 96h86m-76-6 8-7m50 7-8-7" fill="none" stroke="#8A5CF6" strokeWidth="3" strokeLinecap="round" />
@@ -216,9 +252,9 @@ export function AuthIllustration() {
         </g>
 
         <g transform="translate(444 -33)">
-          <g className={`auth-stem-card auth-math-card${stemSequenceStep === 3 ? ' is-sequence-active' : ''}`} aria-label="Maths problems change over time">
+          <g className={`auth-stem-card auth-interactive-card auth-math-card${stemSequenceStep === 3 ? ' is-sequence-active' : ''}`} aria-label="Maths: show another problem" onClick={() => exploreCard('maths')} onKeyDown={(event) => activateWithKeyboard(event, () => exploreCard('maths'))} role="button" tabIndex={0}>
             <circle cx="196" cy="493" r="78" fill="#647BFF" fillOpacity=".2" />
-            <rect x="135" y="432" width="122" height="122" rx="29" fill="#EEF0FF" stroke="#9299FF" strokeWidth="3" />
+            <rect className="auth-stem-card-bg" x="135" y="432" width="122" height="122" rx="29" fill="#EEF0FF" stroke="#9299FF" strokeWidth="3" />
             <rect x="148" y="446" width="96" height="63" rx="15" fill="#DCE5FF" />
             <text className="auth-math-equation" x="196" y="485" textLength="84" lengthAdjust="spacingAndGlyphs">
               {problem} <tspan fill="#7152CD">{answer}</tspan>
@@ -232,10 +268,10 @@ export function AuthIllustration() {
             aria-label="Biology cell: hover or activate to change its colors and rotate horizontally"
             aria-pressed={biologyActive}
             className={`auth-stem-card auth-interactive-card auth-biology-card${biologyActive ? ' is-active' : ''}${stemSequenceStep === 0 ? ' is-sequence-active' : ''}`}
-            onClick={() => setBiologyActive((active) => !active)}
+            onClick={toggleBiology}
             onMouseEnter={() => setBiologyHovered(true)}
             onMouseLeave={() => setBiologyHovered(false)}
-            onKeyDown={(event) => activateWithKeyboard(event, () => setBiologyActive((active) => !active))}
+            onKeyDown={(event) => activateWithKeyboard(event, toggleBiology)}
             role="button"
             tabIndex={0}
           >
@@ -254,8 +290,8 @@ export function AuthIllustration() {
             aria-label="Chemistry flask: hover or activate to change its color"
             aria-pressed={chemistryActive}
             className={`auth-stem-card auth-interactive-card auth-chemistry-card${chemistryActive ? ' is-active' : ''}${stemSequenceStep === 0 ? ' is-sequence-active' : ''}`}
-            onClick={() => setChemistryActive((active) => !active)}
-            onKeyDown={(event) => activateWithKeyboard(event, () => setChemistryActive((active) => !active))}
+            onClick={toggleChemistry}
+            onKeyDown={(event) => activateWithKeyboard(event, toggleChemistry)}
             role="button"
             tabIndex={0}
           >
@@ -272,9 +308,9 @@ export function AuthIllustration() {
         </g>
 
         <g transform="translate(475 -197)">
-          <g className={`auth-stem-card auth-gear-card${stemSequenceStep === 1 ? ' is-sequence-active' : ''}`} aria-label="Technology">
+          <g className={`auth-stem-card auth-interactive-card auth-gear-card${stemSequenceStep === 1 ? ' is-sequence-active' : ''}`} aria-label="Technology: switch between the gear and laptop" onClick={() => exploreCard('technology')} onKeyDown={(event) => activateWithKeyboard(event, () => exploreCard('technology'))} role="button" tabIndex={0}>
             <circle cx="195" cy="337" r="70" fill="#FF6795" fillOpacity=".18" />
-            <rect x="139" y="281" width="112" height="112" rx="29" fill="#FFF0F4" stroke="#FF91AE" strokeWidth="3" />
+            <rect className="auth-stem-card-bg" x="139" y="281" width="112" height="112" rx="29" fill="#FFF0F4" stroke="#FF91AE" strokeWidth="3" />
             <g className={`auth-cycle-image${showTechnologyLaptop ? '' : ' is-visible'}`}>
               <g transform="translate(195 325)" fill="#FF4F87">
                 <path d="M-5-32h10l3 11 9 4 9-6 7 8-7 9 2 10 10 6-3 10-12-1-8 7-1 12h-11l-3-11-9-4-9 6-7-8 7-9-2-10-10-6 3-10 12 1 8-7 1-12Z" />

@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test:auth-illustration": "node --test tests/auth-illustration-ui.test.mjs",
     "test:auth-role": "node --test tests/auth-role-ui.test.mjs",
     "test:class-order": "node --test tests/class-order-ui.test.mjs",
     "test:challenge-form": "node --test tests/challenge-form-ui.test.mjs",
