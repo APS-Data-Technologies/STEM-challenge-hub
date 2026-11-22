@@ -3114,6 +3114,13 @@ body {
   font-size: 1rem;
 }
 
+.workspace-brand > span {
+  color: #294cc4;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
 .workspace-brand .workspace-brand-mark {
   width: 2.45rem;
   height: 2.45rem;
@@ -5414,10 +5421,9 @@ select:focus {
   min-height: 100dvh;
   flex-direction: column;
   background:
-    radial-gradient(ellipse at 2% 94%, rgb(91 222 232 / 17%), transparent 29rem),
-    radial-gradient(ellipse at 96% 5%, rgb(177 128 255 / 16%), transparent 32rem),
-    radial-gradient(ellipse at 70% 100%, rgb(255 202 103 / 13%), transparent 30rem),
-    #f7f8ff;
+    radial-gradient(ellipse at 4% 92%, rgb(121 224 238 / 22%), transparent 29rem),
+    radial-gradient(ellipse at 94% 8%, rgb(174 151 250 / 22%), transparent 32rem),
+    #f8faff;
 }
 
 .auth-global-header {
@@ -5461,10 +5467,11 @@ select:focus {
 
 .auth-content {
   display: grid;
-  width: min(100%, 90rem);
+  width: min(100%, 92rem);
   min-height: calc(100vh - 4.25rem);
   min-height: calc(100dvh - 4.25rem);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  align-content: center;
   align-items: stretch;
   gap: clamp(1.25rem, 3.4vw, 2.7rem);
   margin: 0 auto;
@@ -5473,18 +5480,18 @@ select:focus {
 
 .auth-intro {
   display: flex;
-  min-height: 38rem;
+  min-height: 0;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   overflow: hidden;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid #d8e2ff;
-  border-radius: 2.25rem;
+  border: 1px solid #d1def6;
+  border-radius: 1.75rem;
   background:
-    radial-gradient(ellipse at 12% 10%, rgb(255 255 255 / 72%), transparent 40%),
-    linear-gradient(145deg, #e1faff, #f0e5ff 54%, #fff3cf);
-  box-shadow: 0 1.2rem 3rem rgb(54 78 145 / 8%);
+    radial-gradient(ellipse at 12% 10%, rgb(255 255 255 / 80%), transparent 45%),
+    linear-gradient(145deg, #ddf7ff, #efe6ff 58%, #fff1d2);
+  box-shadow: 0 1rem 2.5rem rgb(54 78 145 / 10%);
 }
 
 .auth-illustration-wrap {
@@ -5493,13 +5500,13 @@ select:focus {
   width: 100%;
   flex-direction: column;
   min-height: 0;
-  max-height: min(31rem, 61vh);
+  max-height: none;
   flex: 0 1 auto;
   margin: 0;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 90%);
   border-radius: 1.9rem;
-  background: linear-gradient(140deg, #d6f7ff, #efdfff 53%, #fff0b8);
+  background: linear-gradient(140deg, #c9f5ff, #eadbff 53%, #ffedb1);
   box-shadow: 0 0.7rem 1.8rem rgb(60 77 137 / 10%), 0 0 1.5rem rgb(109 123 255 / 12%);
 }
 
@@ -5507,7 +5514,7 @@ select:focus {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 28rem;
+  max-height: min(29rem, 50vh);
   flex: 0 1 auto;
   object-fit: contain;
 }
@@ -5914,7 +5921,7 @@ select:focus {
 
 .auth-panel {
   display: grid;
-  min-height: 38rem;
+  min-height: 0;
   place-items: stretch;
   padding: 0;
   background: transparent;
@@ -5924,17 +5931,25 @@ select:focus {
   position: relative;
   display: flex;
   width: 100%;
-  max-width: 42rem;
+  max-width: none;
   flex-direction: column;
   justify-content: center;
   justify-self: center;
-  padding: clamp(1.5rem, 3.5vw, 2.8rem);
-  border: 1px solid #dce3f2;
+  padding: clamp(1.5rem, 2.5vw, 2.1rem);
+  border: 1px solid #e0e6f0;
   border-radius: 1.5rem;
   background:
     linear-gradient(110deg, #4f74ed, #a052d2 55%, #f08a58) top / 100% 0.28rem no-repeat,
-    #fff;
-  box-shadow: 0 1.2rem 2.7rem rgb(39 54 100 / 10%);
+    linear-gradient(180deg, #fff, #fafdff);
+  box-shadow: 0 1rem 2.5rem rgb(39 54 100 / 8%);
+}
+
+.auth-card > .auth-card-kicker {
+  margin: 0 0 0.45rem;
+  color: #5366bc;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
 }
 
 .auth-card h2 {
@@ -6130,13 +6145,17 @@ select:focus {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .auth-card {
+    max-width: 27rem;
+  }
+
   .auth-intro,
   .auth-panel {
     min-height: auto;
   }
 
   .auth-intro {
-    min-height: 34rem;
+    min-height: 0;
   }
 
   .auth-illustration {
@@ -6707,10 +6726,11 @@ html[data-display-mode='dyslexia-friendly'] i {
 }
 
 .auth-preferences-panel .display-mode-control {
+  display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
-  gap: 0.55rem;
-  padding: 0.75rem 0 0;
+  gap: 0.6rem;
+  padding: 0.9rem 0 0;
   border: 0;
   border-top: 1px solid #edf0f5;
   border-radius: 0;
@@ -6733,6 +6753,8 @@ html[data-display-mode='dyslexia-friendly'] i {
 .auth-preferences-panel .display-mode-voice {
   min-width: 4.7rem;
   min-height: 2.45rem;
+  justify-content: flex-start;
+  padding: 0.55rem 0.7rem;
 }
 
 .auth-preferences-panel .display-mode-voice-note {
@@ -6742,8 +6764,10 @@ html[data-display-mode='dyslexia-friendly'] i {
   height: auto;
   overflow: visible;
   clip: auto;
-  color: #738097;
-  font-size: 0.63rem;
+  clip-path: none;
+  margin: 0;
+  color: #5f6b80;
+  font-size: 0.68rem;
   line-height: 1.45;
   white-space: normal;
 }
@@ -7610,10 +7634,6 @@ html[data-display-mode='dyslexia-friendly'] i {
 .teacher-workspace .workspace-brand,
 .teacher-workspace .workspace-brand-name {
   color: #fffaf0;
-}
-
-.teacher-workspace .workspace-brand-mark {
-  filter: brightness(1.3) saturate(0.8);
 }
 
 .teacher-workspace .workspace-role,
@@ -11398,4 +11418,29 @@ html[data-display-mode='dyslexia-friendly'] i {
 .teacher-class-shell .class-greeting .class-message-edit-button:hover {
   background: #eeecff;
   color: #241a88;
+}
+
+.auth-brand .auth-brand-mark,
+.workspace-brand .workspace-brand-mark {
+  box-sizing: border-box;
+  padding: 0.3rem;
+  border: 1px solid #dfe6f8;
+  border-radius: 0.8rem;
+  background: linear-gradient(145deg, #fff, #eef2ff);
+  box-shadow: 0 0.2rem 0.6rem rgb(36 81 212 / 10%);
+  flex: 0 0 auto;
+}
+
+.auth-brand .brand-label,
+.workspace-brand .brand-label {
+  color: #34425e;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+}
+
+.auth-brand .brand-label strong,
+.workspace-brand .brand-label strong {
+  color: #294cc4;
+  font-weight: 800;
 }

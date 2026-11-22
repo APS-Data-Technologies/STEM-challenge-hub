@@ -73,7 +73,7 @@ export function DisplayModeControl({
             <path d="m16 9 5 6m0-6-5 6" />
           )}
         </svg>
-        <span>{readAloudEnabled ? 'On' : 'Off'}</span>
+        <span>Read aloud: {readAloudEnabled ? 'On' : 'Off'}</span>
       </button>
       <p className="display-mode-voice-note" id="display-mode-voice-note">
         {speechAvailable

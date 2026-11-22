@@ -90,6 +90,33 @@ async function openSignIn(mock, selectedRole) {
   return ui
 }
 
+for (const mode of ['signin', 'signup']) {
+  test(`switching roles clears credentials in ${mode} without clearing them on reselect`, async () => {
+    window.localStorage.setItem('stem-challenge-hub-remembered-email', 'saved@example.test')
+    globalThis.__authRoleClient = fakeClient('teacher').client
+    const ui = render(React.createElement(App))
+    await ui.findByRole('button', { name: 'Create an account' })
+    if (mode === 'signup') fireEvent.click(ui.getByRole('button', { name: 'Create an account' }))
+    const email = ui.getByLabelText('Email')
+    assert.equal(email.value, 'saved@example.test')
+    fireEvent.change(ui.getByLabelText('Password'), { target: { value: 'test-password' } })
+    fireEvent.click(ui.getByRole('button', { name: 'Show password' }))
+    fireEvent.click(ui.getByRole('button', { name: 'Teacher' }))
+    assert.equal(email.value, 'saved@example.test')
+    assert.equal(ui.getByLabelText('Password').value, 'test-password')
+    fireEvent.click(ui.getByRole('button', { name: 'Student' }))
+    assert.equal(email.value, '')
+    assert.equal(ui.getByLabelText('Password').value, '')
+    assert.equal(ui.getByLabelText('Password').type, 'password')
+    assert.equal(window.localStorage.getItem('stem-challenge-hub-remembered-email'), 'saved@example.test')
+    fireEvent.change(email, { target: { value: 'student@example.test' } })
+    fireEvent.change(ui.getByLabelText('Password'), { target: { value: 'student-password' } })
+    fireEvent.click(ui.getByRole('button', { name: 'Teacher' }))
+    assert.equal(email.value, '')
+    assert.equal(ui.getByLabelText('Password').value, '')
+  })
+}
+
 for (const [selected, actual] of [['Teacher', 'student'], ['Student', 'teacher']]) {
   test(`rejects ${actual} account when ${selected} is selected`, async () => {
     const mock = fakeClient(actual)
@@ -108,6 +135,25 @@ for (const role of ['teacher', 'student']) {
     } else {
       await ui.findByText('STUDENT WORKSPACE')
     }
+  })
+}
+
+for (const role of ['teacher', 'student']) {
+  test(`shows the home logo in the ${role} workspace`, async () => {
+    globalThis.__authRoleClient = fakeClient(role).client
+    const ui = render(React.createElement(App))
+    await ui.findByRole('button', { name: 'Sign in' })
+    const homeBrand = ui.getByRole('link', { name: 'STEM Challenge Hub home' })
+    const homeText = homeBrand.textContent
+    const homeMark = homeBrand.querySelector('svg').innerHTML
+    fireEvent.click(ui.getByRole('button', { name: role === 'teacher' ? 'Teacher' : 'Student' }))
+    fireEvent.change(ui.getByLabelText('Email'), { target: { value: 'test@example.test' } })
+    fireEvent.change(ui.getByLabelText('Password'), { target: { value: 'test-password' } })
+    fireEvent.click(ui.getByRole('button', { name: 'Sign in' }))
+    await ui.findByText(role === 'teacher' ? 'TEACHER WORKSPACE' : 'STUDENT WORKSPACE')
+    const workspaceBrand = ui.container.querySelector('.workspace-sidebar .workspace-brand')
+    assert.equal(workspaceBrand.textContent, homeText)
+    assert.equal(workspaceBrand.querySelector('svg').innerHTML, homeMark)
   })
 }
 

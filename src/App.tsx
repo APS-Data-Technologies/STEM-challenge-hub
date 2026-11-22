@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { AuthScreen } from './components/AuthScreen'
+import { Brand } from './components/Brand'
 import { ChallengeForm } from './components/ChallengeForm'
 import { DailyJourney } from './components/DailyJourney'
 import { DailyPrograms } from './components/DailyPrograms'
@@ -1121,7 +1122,7 @@ function App() {
     return (
       <main className="config-screen">
         <div className="config-card">
-          <Brand />
+          <Brand workspace />
           <p className="eyebrow">One quick setup step</p>
           <h1>Connect your classroom hub.</h1>
           <p>
@@ -1176,7 +1177,7 @@ function App() {
   if (!profile) {
     return (
       <main className="loading-screen">
-        <Brand />
+        <Brand workspace />
         <div className="notice notice-error" role="alert">
           <span>
             {pageError ||
@@ -1277,7 +1278,7 @@ function App() {
 
       <main className="dashboard workspace-layout">
         <aside className="sidebar workspace-sidebar">
-          <Brand />
+          <Brand workspace />
           <p className="workspace-role">
             {isTeacher ? 'TEACHER WORKSPACE' : 'STUDENT WORKSPACE'}
           </p>
@@ -3299,48 +3300,10 @@ function SubjectMark({ subject }: { subject: Challenge['subject'] }) {
   )
 }
 
-function Brand() {
-  return (
-    <a className="brand workspace-brand" href="/" aria-label="STEM Challenge Hub home">
-      <svg
-        aria-hidden="true"
-        className="brand-mark workspace-brand-mark"
-        viewBox="0 0 40 40"
-      >
-        <ellipse
-          cx="20"
-          cy="20"
-          rx="17"
-          ry="6.5"
-          fill="none"
-          stroke="#2451d4"
-          strokeWidth="2.5"
-          transform="rotate(-35 20 20)"
-        />
-        <ellipse
-          cx="20"
-          cy="20"
-          rx="17"
-          ry="6.5"
-          fill="none"
-          stroke="#f97316"
-          strokeWidth="2.5"
-          transform="rotate(35 20 20)"
-        />
-        <circle cx="20" cy="20" r="3" fill="#7c3aed" />
-      </svg>
-      <span className="brand-name workspace-brand-name">
-        <strong>STEM</strong>
-        <span>Challenge Hub</span>
-      </span>
-    </a>
-  )
-}
-
 function LoadingScreen() {
   return (
     <main className="loading-screen">
-      <Brand />
+      <Brand workspace />
       <LoadingInline />
     </main>
   )

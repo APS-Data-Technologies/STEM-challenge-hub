@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { AuthIllustration } from './AuthIllustration'
+import { Brand } from './Brand'
 import type { UserRole } from '../lib/types'
 import { DisplayModeControl } from './DisplayModeControl'
 import type { DisplayMode } from './DisplayModeControl'
@@ -150,36 +151,7 @@ export function AuthScreen({
   return (
     <main className="auth-screen">
       <header className="auth-global-header">
-        <a className="auth-brand" href="/" aria-label="STEM Challenge Hub home">
-          <svg
-            aria-hidden="true"
-            className="auth-brand-mark"
-            viewBox="0 0 40 40"
-          >
-            <ellipse
-              cx="20"
-              cy="20"
-              rx="17"
-              ry="6.5"
-              fill="none"
-              stroke="#2451d4"
-              strokeWidth="2.5"
-              transform="rotate(-35 20 20)"
-            />
-            <ellipse
-              cx="20"
-              cy="20"
-              rx="17"
-              ry="6.5"
-              fill="none"
-              stroke="#f97316"
-              strokeWidth="2.5"
-              transform="rotate(35 20 20)"
-            />
-            <circle cx="20" cy="20" r="3" fill="#7c3aed" />
-          </svg>
-          <span>STEM Challenge Hub</span>
-        </a>
+        <Brand />
         <div className="auth-header-tools">
           <span className="auth-header-status">A curious place to learn</span>
           <details className="auth-preferences-menu">
@@ -228,11 +200,14 @@ export function AuthScreen({
 
         <section className="auth-panel" aria-labelledby="auth-title">
           <div className="auth-card">
+            <p className="auth-card-kicker">YOUR LEARNING SPACE</p>
             <h2 id="auth-title">{title}</h2>
             <p className="auth-hint">
               {recovery
                 ? 'Use a new password to secure your account.'
-                : 'Fictional demo accounts only. No real student data.'}
+                : mode === 'signin'
+                  ? 'Welcome back. Choose your role to continue.'
+                  : 'Choose your role and create your account.'}
             </p>
 
             {error ? (
@@ -277,7 +252,14 @@ export function AuthScreen({
                           className={role === nextRole ? 'is-selected' : ''}
                           disabled={pending}
                           key={nextRole}
-                          onClick={() => setRole(nextRole)}
+                          onClick={() => {
+                            if (nextRole === role) return
+                            const email = formRef.current?.querySelector<HTMLInputElement>('input[name="email"]')
+                            if (email) email.value = ''
+                            setRole(nextRole)
+                            onError('')
+                            setNotice('')
+                          }}
                           type="button"
                         >
                           {nextRole === 'teacher' ? 'Teacher' : 'Student'}
@@ -318,6 +300,7 @@ export function AuthScreen({
                     autoComplete={
                       mode === 'signin' ? 'current-password' : 'new-password'
                     }
+                    key={role}
                     label="Password"
                     minLength={8}
                     name="password"
