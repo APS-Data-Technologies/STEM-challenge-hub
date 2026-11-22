@@ -13,6 +13,8 @@
     "test:challenge-form": "node --test tests/challenge-form-ui.test.mjs",
     "test:daily-db": "node --test tests/daily-programs.test.cjs",
     "test:daily-ui": "node --test tests/daily-programs-ui.test.mjs",
+    "test:profile-photos-db": "node --test tests/profile-photos.test.cjs",
+    "test:profile-photos-ui": "node --test tests/profile-photos-ui.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

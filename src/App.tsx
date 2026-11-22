@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import type { User } from '@supabase/supabase-js'
+import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { AuthScreen } from './components/AuthScreen'
 import { Brand } from './components/Brand'
 import { ChallengeForm } from './components/ChallengeForm'
 import { DailyJourney } from './components/DailyJourney'
 import { DailyPrograms } from './components/DailyPrograms'
+import { ProfileAvatar, profilePhotoBucket, profilePhotosEnabled } from './components/ProfileAvatar'
 import { DisplayModeControl } from './components/DisplayModeControl'
 import type { DisplayMode } from './components/DisplayModeControl'
 import { getSupabaseClient } from './lib/supabase'
@@ -329,6 +330,8 @@ function App() {
   const [showClassMessageForm, setShowClassMessageForm] = useState(false)
   const [showClassManagement, setShowClassManagement] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
   const [viewingSubmission, setViewingSubmission] =
     useState<Submission | null>(null)
   const [showChallengeForm, setShowChallengeForm] = useState(false)
@@ -532,9 +535,10 @@ function App() {
     let active = true
     void (async () => {
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, role, display_name')
+        const request = supabase.from('profiles')
+        const { data, error } = await (profilePhotosEnabled
+          ? request.select('id, role, display_name, avatar_path')
+          : request.select('id, role, display_name'))
           .eq('id', user.id)
           .single()
         if (!active) return
@@ -683,9 +687,10 @@ function App() {
             (row) => row.student_id,
           )
           if (studentIds.length > 0) {
-            const { data, error } = await supabase
-              .from('profiles')
-              .select('id, role, display_name')
+            const request = supabase.from('profiles')
+            const { data, error } = await (profilePhotosEnabled
+              ? request.select('id, role, display_name, avatar_path')
+              : request.select('id, role, display_name'))
               .in('id', studentIds)
             if (error) throw error
             members = (data ?? []) as Profile[]
@@ -1133,24 +1138,64 @@ function App() {
     setRefreshKey((key) => key + 1)
   }
 
-  async function updateProfile(event: FormEvent<HTMLFormElement>) {
+  async function updateProfile(event: FormEvent<HTMLFormElement>, photo: File | null) {
     event.preventDefault()
-    if (!supabase || !user) return
+    if (!supabase || !user || !profile || profileSaving) return
     const formData = new FormData(event.currentTarget)
     const displayName = String(formData.get('displayName') ?? '').trim()
-    if (!displayName) return
-    const { error } = await supabase
-      .from('profiles')
-      .update({ display_name: displayName })
-      .eq('id', user.id)
-    if (error) {
-      setPageError(error.message)
+    if (!displayName) {
+      setProfileError('Enter a display name.')
       return
     }
-    setProfile((current) =>
-      current ? { ...current, display_name: displayName } : current,
-    )
-    setShowProfile(false)
+    const removePhoto = formData.has('removePhoto')
+    if (photo && (!['image/jpeg', 'image/png', 'image/webp'].includes(photo.type) || photo.size === 0 || photo.size > 2 * 1024 * 1024)) {
+      setProfileError('Choose a JPEG, PNG, or WebP image no larger than 2 MB.')
+      return
+    }
+    if (photo && removePhoto) {
+      setProfileError('Choose a new photo or remove the current photo, not both.')
+      return
+    }
+
+    setProfileSaving(true)
+    setProfileError('')
+    let uploadedPath: string | null = null
+    let saved = false
+    try {
+      if (photo && profilePhotosEnabled) {
+        uploadedPath = `${user.id}/${crypto.randomUUID()}`
+        const { error } = await supabase.storage.from(profilePhotoBucket).upload(uploadedPath, photo)
+        if (error) throw error
+      }
+      const avatarPath = uploadedPath ?? (removePhoto ? null : profile.avatar_path ?? null)
+      const values = profilePhotosEnabled
+        ? { display_name: displayName, avatar_path: avatarPath }
+        : { display_name: displayName }
+      const { error } = await supabase.from('profiles').update(values).eq('id', user.id).select('id').single()
+      if (error) throw error
+      saved = true
+      setProfile((current) =>
+        current?.id === user.id ? { ...current, display_name: displayName, ...(profilePhotosEnabled ? { avatar_path: avatarPath } : {}) } : current,
+      )
+      if (profile.avatar_path && profile.avatar_path !== avatarPath) {
+        const { error: removeError } = await supabase.storage.from(profilePhotoBucket).remove([profile.avatar_path])
+        if (removeError) throw new Error(`Profile saved, but the previous photo could not be deleted: ${removeError.message}`)
+      }
+      setShowProfile(false)
+    } catch (error) {
+      let detail = errorMessage(error)
+      if (uploadedPath && !saved) {
+        try {
+          const { error: cleanupError } = await supabase.storage.from(profilePhotoBucket).remove([uploadedPath])
+          if (cleanupError) throw cleanupError
+        } catch (cleanupError) {
+          detail += ` The uploaded photo could not be cleaned up: ${errorMessage(cleanupError)}`
+        }
+      }
+      setProfileError(detail)
+    } finally {
+      setProfileSaving(false)
+    }
   }
 
   if (!isSupabaseConfigured) {
@@ -1264,9 +1309,7 @@ function App() {
             aria-label={`Open account menu for ${profile.display_name}`}
             className="account-menu-trigger"
           >
-            <span className="avatar" aria-hidden="true">
-              {profile.display_name.slice(0, 1).toUpperCase()}
-            </span>
+            <ProfileAvatar className="avatar" profile={profile} supabase={supabase!} />
             <span className="account-copy">
               <strong>{profile.display_name}</strong>
               <span>{isTeacher ? 'Teacher' : 'Student'}</span>
@@ -1275,9 +1318,7 @@ function App() {
           </summary>
           <div className="account-menu-panel">
             <div className="account-menu-identity">
-              <span className="avatar account-menu-large-avatar" aria-hidden="true">
-                {profile.display_name.slice(0, 1).toUpperCase()}
-              </span>
+              <ProfileAvatar className="avatar account-menu-large-avatar" profile={profile} supabase={supabase!} />
               <span>
                 <strong>{profile.display_name}</strong>
                 <small>{isTeacher ? 'Teacher account' : 'Student account'}</small>
@@ -1288,6 +1329,7 @@ function App() {
               className="account-menu-action"
               onClick={(event) => {
                 event.currentTarget.closest('details')?.removeAttribute('open')
+                setProfileError('')
                 setShowProfile(true)
               }}
               type="button"
@@ -1465,7 +1507,8 @@ function App() {
             ) : (
               <TeacherBandChooser
                 classes={classes}
-                teacherName={profile.display_name}
+                profile={profile}
+                supabase={supabase!}
                 onChoose={(band) => {
                   resetClassOrder(band)
                   setTeacherGradeBand(band)
@@ -1754,6 +1797,7 @@ function App() {
         <ClassManagement
           classRecord={selectedClass}
           members={dashboard.members}
+          supabase={supabase!}
           onCancel={() => setShowClassManagement(false)}
           onDeleteClass={deleteClass}
           onRemoveStudent={removeStudent}
@@ -1767,8 +1811,10 @@ function App() {
           onDisplayModeChange={setDisplayMode}
           onReadAloudChange={setReadAloudEnabled}
           profile={profile}
+          error={profileError}
+          saving={profileSaving}
           readAloudEnabled={readAloudEnabled}
-          onCancel={() => setShowProfile(false)}
+          onCancel={() => { if (!profileSaving) setShowProfile(false) }}
           onSave={updateProfile}
         />
       ) : null}
@@ -2535,6 +2581,7 @@ function SummaryCard({
 function ClassManagement({
   classRecord,
   members,
+  supabase,
   onCancel,
   onDeleteClass,
   onRemoveStudent,
@@ -2542,6 +2589,7 @@ function ClassManagement({
 }: {
   classRecord: ClassRecord
   members: Profile[]
+  supabase: SupabaseClient
   onCancel: () => void
   onDeleteClass: () => void
   onRemoveStudent: (student: Profile) => void
@@ -2594,9 +2642,7 @@ function ClassManagement({
             <ul className="member-list">
               {members.map((member) => (
                 <li key={member.id}>
-                  <span className="member-avatar" aria-hidden="true">
-                    {member.display_name.slice(0, 1).toUpperCase()}
-                  </span>
+                  <ProfileAvatar className="member-avatar" profile={member} supabase={supabase} />
                   <span className="member-name">{member.display_name}</span>
                   <button
                     className="text-button text-danger"
@@ -2642,6 +2688,8 @@ function ProfileDialog({
   onDisplayModeChange,
   onReadAloudChange,
   profile,
+  error,
+  saving,
   readAloudEnabled,
   onCancel,
   onSave,
@@ -2651,10 +2699,13 @@ function ProfileDialog({
   onDisplayModeChange: (mode: DisplayMode) => void
   onReadAloudChange: (enabled: boolean) => void
   profile: Profile
+  error: string
+  saving: boolean
   readAloudEnabled: boolean
   onCancel: () => void
-  onSave: (event: FormEvent<HTMLFormElement>) => void
+  onSave: (event: FormEvent<HTMLFormElement>, photo: File | null) => void
 }) {
+  const [photo, setPhoto] = useState<File | null>(null)
   return (
     <div className="modal-backdrop" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onCancel()
@@ -2699,7 +2750,18 @@ function ProfileDialog({
           <p className="eyebrow">ACCOUNT</p>
           <h3>Profile details</h3>
         </div>
-        <form className="challenge-form" onSubmit={onSave}>
+        <form className="challenge-form" onSubmit={(event) => onSave(event, photo)}>
+          {error ? <div className="notice notice-error" role="alert">{error}</div> : null}
+          {profilePhotosEnabled ? (
+            <>
+              <label className="field-label">
+                Profile photo
+                <input accept="image/jpeg,image/png,image/webp" disabled={saving} name="photo" type="file" onChange={(event) => setPhoto(event.currentTarget.files?.[0] ?? null)} />
+                <span className="field-hint">JPEG, PNG, or WebP; maximum 2 MB. Class members can view your photo. Use fictional images only.</span>
+              </label>
+              {profile.avatar_path ? <label className="profile-photo-remove"><input disabled={saving} name="removePhoto" type="checkbox" /> Remove current photo</label> : null}
+            </>
+          ) : <p className="field-hint">Profile photos are not enabled. Ask an administrator to complete the storage setup.</p>}
           <label className="field-label">
             Display name
             <input
@@ -2717,12 +2779,13 @@ function ProfileDialog({
             <button
               className="button button-secondary"
               onClick={onCancel}
+              disabled={saving}
               type="button"
             >
               Cancel
             </button>
-            <button className="button button-primary" type="submit">
-              Save profile
+            <button className="button button-primary" disabled={saving} type="submit">
+              {saving ? 'Saving...' : 'Save profile'}
             </button>
           </footer>
         </form>
@@ -2783,14 +2846,16 @@ function AnswerViewer({
 
 function TeacherBandChooser({
   classes,
-  teacherName,
+  profile,
+  supabase,
   onChoose,
 }: {
   classes: ClassRecord[]
-  teacherName: string
+  profile: Profile
+  supabase: SupabaseClient
   onChoose: (band: TeacherGradeBand) => void
 }) {
-  const displayName = teacherName.trim() || 'Teacher'
+  const displayName = profile.display_name.trim() || 'Teacher'
   const classCounts = teacherGradeBands.map((band) => ({
     ...band,
     classCount: classes.filter(
@@ -2864,9 +2929,7 @@ function TeacherBandChooser({
         </div>
         <aside className="teacher-mission-rail" aria-label="Teacher dashboard summary">
           <section className="teacher-mission-profile">
-            <span className="teacher-mission-avatar" aria-hidden="true">
-              {displayName.slice(0, 1).toUpperCase()}
-            </span>
+            <ProfileAvatar className="teacher-mission-avatar" profile={profile} supabase={supabase} />
             <div>
               <p>Welcome back,</p>
               <h2>{displayName}</h2>

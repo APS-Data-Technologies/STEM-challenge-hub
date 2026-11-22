@@ -12,6 +12,7 @@ export interface Profile {
   id: string
   role: UserRole
   display_name: string
+  avatar_path?: string | null
 }
 
 export interface ClassRecord {

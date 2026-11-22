@@ -54,6 +54,39 @@
   font-weight: 700;
 }
 
+.avatar img,
+.member-avatar img,
+.teacher-mission-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.profile-avatar-error {
+  position: relative;
+}
+
+.profile-avatar-warning {
+  position: absolute;
+  right: -0.15rem;
+  bottom: -0.15rem;
+  display: grid;
+  width: 0.9rem;
+  height: 0.9rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #a32929;
+  color: #fff;
+  font-size: 0.65rem;
+}
+
+.profile-photo-remove {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .account-copy {
   display: grid;
   gap: 0.1rem;
