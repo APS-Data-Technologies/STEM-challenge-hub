@@ -122,12 +122,12 @@ test('teacher plans a program, adds a question, and publishes', async () => {
   const mock = fakeSupabase()
   const ui = mount(mock)
   fireEvent.click(await ui.findByRole('button', { name: 'Create daily program' }))
-  fireEvent.change(ui.getByLabelText('Program name'), { target: { value: 'Math week' } })
+  fireEvent.change(ui.getByLabelText('Title', { exact: true }), { target: { value: 'Math week' } })
   fireEvent.change(ui.getByLabelText('Start date'), { target: { value: '2026-11-20' } })
   assert.match(ui.getByText(/Total questions:/).textContent, /1/)
   fireEvent.click(ui.getByRole('button', { name: 'Save plan' }))
   await ui.findByRole('heading', { name: 'Math week' })
-  fireEvent.click(ui.getByRole('button', { name: 'Add question' }))
+  fireEvent.click(await ui.findByRole('button', { name: 'Add question' }))
   fireEvent.change(ui.getByLabelText('Question title'), { target: { value: 'First question' } })
   fireEvent.change(ui.getByLabelText('Question', { exact: true }), { target: { value: 'Choose one' } })
   fireEvent.change(ui.getByLabelText(/Answer choices/), { target: { value: 'A\nB' } })
@@ -139,6 +139,47 @@ test('teacher plans a program, adds a question, and publishes', async () => {
   await ui.findByRole('button', { name: 'Unpublish' })
   assert.equal(mock.rows.daily_programs[0].is_published, true)
 })
+
+test('a teacher can edit a daily plan using the Title field', async () => {
+  const mock = fakeSupabase({ daily_programs: [sampleProgram()] })
+  const ui = mount(mock)
+  await ui.findByRole('heading', { name: 'Math week' })
+  fireEvent.click(ui.getByRole('button', { name: 'Edit plan' }))
+  const title = ui.getByLabelText('Title', { exact: true })
+  assert.equal(title.value, 'Math week')
+  fireEvent.change(title, { target: { value: 'Math discoveries' } })
+  fireEvent.click(ui.getByRole('button', { name: 'Save plan' }))
+  await ui.findByRole('heading', { name: 'Math discoveries' })
+  assert.equal(mock.rows.daily_programs[0].title, 'Math discoveries')
+})
+
+for (const isTeacher of [true, false]) {
+  test(`${isTeacher ? 'teachers' : 'students'} see consecutive question numbers when order slots have gaps`, async () => {
+    const mock = fakeSupabase({
+      daily_programs: [{ ...sampleProgram(!isTeacher), days: 2, easy_count: 3 }],
+      daily_program_questions: [
+        { id: 'one', program_id: 'program', day_number: 1, position: 2, level: 'Easy', title: 'First', prompt: 'One?', answer_type: 'short_answer', choices: null },
+        { id: 'two', program_id: 'program', day_number: 1, position: 5, level: 'Easy', title: 'Second', prompt: 'Two?', answer_type: 'short_answer', choices: null },
+        { id: 'three', program_id: 'program', day_number: 2, position: 3, level: 'Easy', title: 'Another day', prompt: 'Three?', answer_type: 'short_answer', choices: null },
+      ],
+    })
+    const ui = mount(mock, isTeacher)
+    const first = (await ui.findByRole('heading', { name: 'First' })).closest('article')
+    const second = ui.getByRole('heading', { name: 'Second' }).closest('article')
+    const third = ui.getByRole('heading', { name: 'Another day' }).closest('article')
+    assert.match(first.textContent, /Day 1 · Question 1 · Easy/)
+    assert.match(second.textContent, /Day 1 · Question 2 · Easy/)
+    assert.match(third.textContent, /Day 2 · Question 1 · Easy/)
+    if (isTeacher) {
+      assert.match(ui.getByText(/Question plan/).textContent, /3 of 3 added/)
+      assert.match(first.textContent, /Order slot 2/)
+      fireEvent.click(within(first).getByRole('button', { name: 'Edit' }))
+      assert.equal(ui.getByLabelText(/Order slot for this day/).value, '2')
+    } else {
+      assert.doesNotMatch(first.textContent, /Order slot/)
+    }
+  })
+}
 
 test('students answer questions without fetching answer keys', async () => {
   const mock = fakeSupabase({

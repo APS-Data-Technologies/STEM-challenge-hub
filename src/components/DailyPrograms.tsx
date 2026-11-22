@@ -68,6 +68,8 @@ export function DailyPrograms({
   isTeacher,
   members,
   refreshKey,
+  refreshReady = true,
+  onRefreshResult,
 }: {
   supabase: SupabaseClient
   classId: string
@@ -75,6 +77,8 @@ export function DailyPrograms({
   isTeacher: boolean
   members: Profile[]
   refreshKey: number
+  refreshReady?: boolean
+  onRefreshResult?: (key: number, status: 'loading' | 'success' | 'error') => void
 }) {
   const [programs, setPrograms] = useState<DailyProgram[]>([])
   const [selectedId, setSelectedId] = useState('')
@@ -92,7 +96,9 @@ export function DailyPrograms({
   const [loading, setLoading] = useState(true)
   const [detailsForId, setDetailsForId] = useState('')
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
   const [revision, setRevision] = useState(0)
+  const [loadedPrograms, setLoadedPrograms] = useState<{ key: number; revision: number } | null>(null)
   const selected = programs.find((program) => program.id === selectedId)
 
   function reload() {
@@ -100,7 +106,9 @@ export function DailyPrograms({
   }
 
   useEffect(() => {
+    if (!refreshReady) return
     let active = true
+    onRefreshResult?.(refreshKey, 'loading')
     void (async () => {
       try {
         const { data, error: loadError } = await supabase
@@ -113,18 +121,28 @@ export function DailyPrograms({
         const next = (data ?? []) as DailyProgram[]
         setPrograms(next)
         setSelectedId((id) => next.some((program) => program.id === id) ? id : (next[0]?.id ?? ''))
+        setLoadedPrograms({ key: refreshKey, revision })
+        if (!next.length) {
+          setLoadError('')
+          onRefreshResult?.(refreshKey, 'success')
+        }
       } catch (loadError) {
-        if (active) setError(message(loadError))
+        if (active) {
+          setLoadError(message(loadError))
+          onRefreshResult?.(refreshKey, 'error')
+        }
       } finally {
         if (active) setLoading(false)
       }
     })()
     return () => { active = false }
-  }, [supabase, classId, refreshKey, revision])
+  }, [supabase, classId, refreshKey, revision, refreshReady, onRefreshResult])
 
   useEffect(() => {
-    if (!selectedId) return
+    if (!refreshReady || loadedPrograms?.key !== refreshKey || loadedPrograms.revision !== revision ||
+        !selectedId || !programs.some((program) => program.id === selectedId)) return
     let active = true
+    onRefreshResult?.(refreshKey, 'loading')
     void (async () => {
       try {
         const { data: questionData, error: questionError } = await supabase
@@ -177,9 +195,12 @@ export function DailyPrograms({
         setKeys(nextKeys)
         setProgress(nextProgress)
         setDetailsForId(selectedId)
+        setLoadError('')
+        onRefreshResult?.(refreshKey, 'success')
       } catch (loadError) {
         if (active) {
-          setError(message(loadError))
+          setLoadError(message(loadError))
+          onRefreshResult?.(refreshKey, 'error')
           setQuestions([])
           setAnswers([])
           setKeys([])
@@ -189,7 +210,7 @@ export function DailyPrograms({
       }
     })()
     return () => { active = false }
-  }, [supabase, selectedId, isTeacher, members, userId, programs, refreshKey, revision])
+  }, [supabase, selectedId, isTeacher, members, userId, programs, refreshKey, revision, refreshReady, loadedPrograms, onRefreshResult])
 
   async function saveProgram(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -383,6 +404,7 @@ export function DailyPrograms({
   return (
     <section className="daily-programs" aria-label="Daily programs">
       {error ? <div className="notice notice-error" role="alert"><span>{error}</span><button aria-label="Dismiss error" type="button" onClick={() => setError('')}>×</button></div> : null}
+      {loadError ? <div className="notice notice-error" role="alert"><span>{loadError}</span><button aria-label="Dismiss loading error" type="button" onClick={() => setLoadError('')}>×</button></div> : null}
       <div className="daily-program-toolbar">
         <div>
           <h2>{isTeacher ? 'Manage programs' : 'Daily programs'}</h2>
@@ -486,9 +508,11 @@ export function DailyPrograms({
                     <div className="daily-question-list">
                       {questions.map((question) => {
                         const answer = answers.find((item) => item.question_id === question.id && item.student_id === userId)
+                        const number = questions.filter((item) => item.day_number === question.day_number)
+                          .findIndex((item) => item.id === question.id) + 1
                         return (
                           <article className="daily-question" key={question.id}>
-                            <p className="daily-question-meta">Day {question.day_number} · Question {question.position} · {question.level}</p>
+                            <p className="daily-question-meta">Day {question.day_number} · Question {number} · {question.level}{isTeacher && number !== question.position ? ` · Order slot ${question.position}` : ''}</p>
                             <h4>{question.title}</h4>
                             <p>{question.prompt}</p>
                             {isTeacher ? (
@@ -557,7 +581,7 @@ function ProgramForm({ program, busy, onSave, onCancel }: {
   return (
     <form className="daily-editor" onSubmit={(event) => void onSave(event)}>
       <h3>{program ? 'Edit daily plan' : 'Create a daily plan'}</h3>
-      <label className="field-label">Program name<input name="title" defaultValue={program?.title} maxLength={100} required /></label>
+      <label className="field-label">Title<input name="title" defaultValue={program?.title} maxLength={100} required /></label>
       <div className="form-grid">
         <label className="field-label">Subject<select name="subject" defaultValue={program?.subject ?? 'Math'}>{['Math', 'Science', 'Technology', 'Engineering'].map((subject) => <option key={subject}>{subject}</option>)}</select></label>
         <label className="field-label">Grade band<select name="gradeBand" defaultValue={program?.grade_band ?? 'K-2'}>{['K-2', '3-5', '6-8', '9-12'].map((band) => <option key={band}>{band}</option>)}</select></label>
@@ -589,7 +613,7 @@ function QuestionForm({ question, correctChoice, days, busy, onSave, onCancel }:
       <h3>{question ? 'Edit question' : 'Add a question'}</h3>
       <div className="form-grid">
         <label className="field-label">Day<input name="day" type="number" min={1} max={days} defaultValue={question?.day_number ?? 1} required /></label>
-        <label className="field-label">Question number for this day<input name="position" type="number" min={1} max={10} defaultValue={question?.position ?? 1} required /></label>
+        <label className="field-label">Order slot for this day<input name="position" type="number" min={1} max={10} defaultValue={question?.position ?? 1} required /><span className="field-hint">Slots determine the order; displayed question numbers are consecutive.</span></label>
         <label className="field-label">Difficulty<select name="level" defaultValue={question?.level ?? 'Easy'}><option>Easy</option><option>Medium</option><option>Hard</option></select></label>
         <label className="field-label">Answer type<select name="answerType" value={answerType} onChange={(event) => setAnswerType(event.target.value as AnswerType)}><option value="multiple_choice">Multiple choice</option><option value="short_answer">Short answer</option></select></label>
       </div>

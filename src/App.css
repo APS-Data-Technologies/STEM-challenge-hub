@@ -244,6 +244,12 @@
   gap: 0.55rem;
 }
 
+.class-refresh-status {
+  color: #355278;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .join-code {
   cursor: pointer;
   font: inherit;
@@ -5612,9 +5618,14 @@ select:focus {
   animation: auth-physics-rainbow-rays 5s linear infinite;
 }
 
+.auth-physics-card.is-manual .auth-physics-glow,
+.auth-physics-card.is-manual .auth-physics-bulb,
+.auth-physics-card.is-manual .auth-physics-rays {
+  animation: none;
+}
+
 .auth-planet-card,
 .auth-rocket-card,
-.auth-physics-card,
 .auth-math-card,
 .auth-gear-card {
   animation: auth-card-float 4s ease-in-out infinite;
@@ -5622,10 +5633,6 @@ select:focus {
 
 .auth-rocket-card {
   animation-delay: -1.2s;
-}
-
-.auth-physics-card {
-  animation-delay: -2.4s;
 }
 
 .auth-math-card {

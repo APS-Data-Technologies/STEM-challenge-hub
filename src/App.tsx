@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { AuthScreen } from './components/AuthScreen'
@@ -318,6 +318,13 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [classRefresh, setClassRefresh] = useState<{
+    classId: string
+    classesLoadedKey: number | null
+    dashboardLoadedKey: number | null
+    dailyLoadedKey: number | null
+    requiresDaily: boolean
+  } | null>(null)
   const [showClassForm, setShowClassForm] = useState(false)
   const [showClassMessageForm, setShowClassMessageForm] = useState(false)
   const [showClassManagement, setShowClassManagement] = useState(false)
@@ -504,6 +511,7 @@ function App() {
         setTeacherGradeBand(null)
         expectedSignInRole.current = null
       }
+      setClassRefresh(null)
       setUser(currentUser)
       setProfileLoading(Boolean(currentUser))
       setProfile(null)
@@ -624,8 +632,16 @@ function App() {
             ? current
             : (availableClasses[0]?.id ?? ''),
         )
+        setClassRefresh((current) =>
+          current && current.classesLoadedKey !== refreshKey
+            ? { ...current, classesLoadedKey: refreshKey }
+            : current,
+        )
       } catch (error) {
-        if (active) setPageError(errorMessage(error))
+        if (active) {
+          setClassRefresh(null)
+          setPageError(errorMessage(error))
+        }
       }
     })()
 
@@ -705,9 +721,17 @@ function App() {
             ),
             submissions,
           })
+          setClassRefresh((current) =>
+            current?.classId === selectedClassId && current.dashboardLoadedKey !== refreshKey
+              ? { ...current, dashboardLoadedKey: refreshKey }
+              : current,
+          )
         }
       } catch (error) {
-        if (active) setPageError(errorMessage(error))
+        if (active) {
+          setClassRefresh(null)
+          setPageError(errorMessage(error))
+        }
       }
     })()
 
@@ -715,6 +739,17 @@ function App() {
       active = false
     }
   }, [supabase, user, profile, selectedClassId, refreshKey])
+
+  useEffect(() => () => setClassRefresh(null), [selectedClassId, teacherView, studentDailyView, showAllClasses])
+
+  const handleDailyRefresh = useCallback((key: number, status: 'loading' | 'success' | 'error') => {
+    setClassRefresh((current) => {
+      if (!current?.requiresDaily) return current
+      if (status === 'error') return null
+      const dailyLoadedKey = status === 'success' ? key : null
+      return current.dailyLoadedKey === dailyLoadedKey ? current : { ...current, dailyLoadedKey }
+    })
+  }, [])
 
   useEffect(() => {
     if (!user || !profile) return
@@ -1514,14 +1549,37 @@ function App() {
                   ) : null}
                   <button
                     className="button button-secondary"
+                    disabled={Boolean(
+                      classRefresh &&
+                        classRefresh.classId === selectedClass.id &&
+                        (classRefresh.classesLoadedKey !== refreshKey ||
+                          classRefresh.dashboardLoadedKey !== refreshKey ||
+                          (classRefresh.requiresDaily && classRefresh.dailyLoadedKey !== refreshKey)),
+                    )}
                     onClick={() => {
                       setPageError('')
+                      setClassRefresh({
+                        classId: selectedClass.id,
+                        classesLoadedKey: null,
+                        dashboardLoadedKey: null,
+                        dailyLoadedKey: null,
+                        requiresDaily: isTeacher ? teacherView === 'daily' : studentDailyView,
+                      })
                       setRefreshKey((key) => key + 1)
                     }}
                     type="button"
                   >
                     Refresh class
                   </button>
+                  {classRefresh?.classId === selectedClass.id ? (
+                    <span className="class-refresh-status" role="status">
+                      {classRefresh.classesLoadedKey === refreshKey &&
+                      classRefresh.dashboardLoadedKey === refreshKey &&
+                      (!classRefresh.requiresDaily || classRefresh.dailyLoadedKey === refreshKey)
+                        ? 'Class refreshed.'
+                        : 'Refreshing class...'}
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -1608,6 +1666,8 @@ function App() {
                   isTeacher={isTeacher}
                   members={currentDashboard.members}
                   refreshKey={refreshKey}
+                  refreshReady={!classRefresh?.requiresDaily || classRefresh.dashboardLoadedKey === refreshKey}
+                  onRefreshResult={handleDailyRefresh}
                 /> : <LoadingInline />
               ) : isTeacher ? (
                 <TeacherDashboard

@@ -16,11 +16,21 @@ const stemSubjects = [
   { letter: 'M', subject: 'Maths' },
 ] as const
 
+const physicsColors = [
+  { name: 'blue', value: '#3185FF' },
+  { name: 'violet', value: '#A855F7' },
+  { name: 'red', value: '#FF595E' },
+  { name: 'orange', value: '#FF924C' },
+  { name: 'yellow', value: '#FFD83D' },
+  { name: 'green', value: '#28C77A' },
+] as const
+
 export function AuthIllustration() {
   const [equationIndex, setEquationIndex] = useState(0)
   const [chemistryActive, setChemistryActive] = useState(false)
   const [biologyActive, setBiologyActive] = useState(false)
   const [biologyHovered, setBiologyHovered] = useState(false)
+  const [physicsColorIndex, setPhysicsColorIndex] = useState<number | null>(null)
   const [robotGiggles, setRobotGiggles] = useState(false)
   const [stemSequenceStep, setStemSequenceStep] = useState<number | null>(null)
   const [showEngineeringRocket, setShowEngineeringRocket] = useState(false)
@@ -120,6 +130,14 @@ export function AuthIllustration() {
     setChemistryActive((active) => !active)
   }
 
+  function changePhysicsColor() {
+    const next = physicsColorIndex === null ? 0 : (physicsColorIndex + 1) % physicsColors.length
+    setStemSequenceStep(null)
+    setRobotGiggles(false)
+    setPhysicsColorIndex(next)
+    setCardCaption(`Physics: the light is ${physicsColors[next].name}. Tap again to change its color.`)
+  }
+
   function activateWithKeyboard(
     event: KeyboardEvent<SVGGElement>,
     activate: () => void,
@@ -131,6 +149,7 @@ export function AuthIllustration() {
   }
 
   const [problem, answer] = equations[equationIndex]
+  const physicsColor = physicsColorIndex === null ? null : physicsColors[physicsColorIndex]
 
   return (
     <figure className="auth-illustration-wrap">
@@ -237,14 +256,14 @@ export function AuthIllustration() {
         </g>
 
         <g transform="translate(-450 273)">
-          <g className={`auth-stem-card auth-physics-card${stemSequenceStep === 0 ? ' is-sequence-active' : ''}`} aria-label="Physics">
-            <circle className="auth-physics-glow" cx="710" cy="187" r="78" fill="#FFC83D" fillOpacity=".22" />
-            <rect className="auth-physics-card-bg" x="650" y="127" width="120" height="120" rx="30" fill="#FFF9DA" stroke="#F1CB52" strokeWidth="3" />
+          <g className={`auth-stem-card auth-interactive-card auth-physics-card${physicsColor ? ' is-manual' : ''}${stemSequenceStep === 0 ? ' is-sequence-active' : ''}`} aria-label="Physics lightbulb: change its rainbow color" onClick={changePhysicsColor} onKeyDown={(event) => activateWithKeyboard(event, changePhysicsColor)} role="button" tabIndex={0}>
+            <circle className="auth-physics-glow" cx="710" cy="187" r="78" fill={physicsColor?.value ?? '#FFC83D'} fillOpacity=".22" />
+            <rect className="auth-stem-card-bg auth-physics-card-bg" x="650" y="127" width="120" height="120" rx="30" fill="#FFF9DA" stroke="#F1CB52" strokeWidth="3" />
             <g transform="translate(0 -14)">
               <g transform="translate(710 190) scale(0.9) translate(-710 -190)">
-              <path className="auth-physics-bulb" d="M710 157a30 30 0 0 0-19 53c7 5 8 12 8 17h22c0-5 1-12 8-17a30 30 0 0 0-19-53Z" fill="#FFD83D" stroke="#26334D" strokeWidth="4" />
+              <path className="auth-physics-bulb" d="M710 157a30 30 0 0 0-19 53c7 5 8 12 8 17h22c0-5 1-12 8-17a30 30 0 0 0-19-53Z" fill={physicsColor?.value ?? '#FFD83D'} stroke="#26334D" strokeWidth="4" />
               <path d="M701 228h18m-15 9h12m-9 8h6" stroke="#8291A8" strokeWidth="4" strokeLinecap="round" />
-              <path className="auth-physics-rays" d="M710 145v-8m-39 24-7-6m85 6 7-6" stroke="#E8B926" strokeWidth="4" strokeLinecap="round" />
+              <path className="auth-physics-rays" d="M710 145v-8m-39 24-7-6m85 6 7-6" stroke={physicsColor?.value ?? '#E8B926'} strokeWidth="4" strokeLinecap="round" />
               </g>
             </g>
             <text x="710" y="232" className="auth-card-label">PHYSICS</text>
