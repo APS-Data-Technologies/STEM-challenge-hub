@@ -2977,9 +2977,9 @@ function TeacherClassOverview({
   onChangeBand: () => void
 }) {
   const [selectedGrade, setSelectedGrade] = useState(
-    band === 'K-5' ? '5' : band === '6-8' ? '6' : '9',
+    band === 'K-5' ? 'Kindergarten' : band === '6-8' ? '6' : '9',
   )
-  const [selectedSubject, setSelectedSubject] = useState('Math')
+  const [selectedSubject, setSelectedSubject] = useState('Science')
   const [sectionPrompt, setSectionPrompt] = useState(false)
   const [sectionChoice, setSectionChoice] = useState('A')
   const selectedClass = classes.find(
