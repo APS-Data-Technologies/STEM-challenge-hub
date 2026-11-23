@@ -1603,14 +1603,6 @@ function App() {
                       >
                         Manage class
                       </button>
-                      {isTeacher && teacherView === 'challenges' ? (
-                        <button
-                          className="button button-secondary feedback-button"
-                          onClick={() => setShowChallengeFeedback(true)}
-                        >
-                          <span aria-hidden="true">💬</span> Feedback
-                        </button>
-                      ) : null}
                     </>
                   ) : null}
                   <button
@@ -1829,7 +1821,7 @@ function App() {
           onRenameClass={renameClass}
         />
       ) : null}
-      {showChallengeFeedback && selectedClass && dashboard && isTeacher ? (
+      {showChallengeFeedback && selectedClass && dashboard ? (
         <ChallengeFeedback
           challenges={dashboard.challenges.filter((c) => c.is_published)}
           classRecord={selectedClass}
@@ -2346,6 +2338,15 @@ function StudentDashboard({
                 </div>
               ) : null}
             </form>
+            <div className="challenge-feedback-action">
+              <button
+                className="button button-secondary"
+                onClick={() => setShowChallengeFeedback(true)}
+                type="button"
+              >
+                <span aria-hidden="true">💬</span> Send feedback
+              </button>
+            </div>
           </article>
         )
       })}
@@ -2727,15 +2728,27 @@ function ChallengeFeedback({
   onCancel: () => void
 }) {
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null)
+  const [feedbackText, setFeedbackText] = useState('')
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
+  const [clarity, setClarity] = useState<'clear' | 'somewhat' | 'confusing'>('clear')
+  const [enjoyment, setEnjoyment] = useState<'loved' | 'liked' | 'okay' | 'struggled'>('liked')
+  const [submitted, setSubmitted] = useState(false)
 
   const selectedChallenge = challenges.find((c) => c.id === selectedChallengeId)
-  const studentsWithSubmissions = selectedChallenge && dashboard
-    ? dashboard.members.filter((member) =>
-        dashboard.submissions.some(
-          (sub) => sub.challenge_id === selectedChallenge.id && sub.student_id === member.id,
-        ),
-      )
-    : []
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    // Here you would save the feedback to the database
+    setSubmitted(true)
+    setTimeout(() => {
+      setSubmitted(false)
+      setSelectedChallengeId(null)
+      setFeedbackText('')
+      setDifficulty('medium')
+      setClarity('clear')
+      setEnjoyment('liked')
+    }, 2000)
+  }
 
   return (
     <div className="modal-backdrop" onMouseDown={(event) => {
@@ -2749,7 +2762,7 @@ function ChallengeFeedback({
       >
         <header className="modal-header">
           <div>
-            <p className="eyebrow">PROVIDE FEEDBACK</p>
+            <p className="eyebrow">HELP US IMPROVE</p>
             <h2 id="feedback-title">Challenge feedback</h2>
           </div>
           <button
@@ -2761,19 +2774,20 @@ function ChallengeFeedback({
             ×
           </button>
         </header>
-        <div className="feedback-content">
+        <form className="feedback-content" onSubmit={handleSubmit}>
           {!selectedChallenge ? (
             <div>
               <label className="field-label">
-                <span>Select a challenge</span>
+                <span>Which challenge would you like to give feedback on?</span>
                 <select
                   onChange={(event) => setSelectedChallengeId(event.target.value || null)}
                   value={selectedChallengeId || ''}
+                  required
                 >
                   <option value="">Choose a challenge...</option>
                   {challenges.map((challenge) => (
                     <option key={challenge.id} value={challenge.id}>
-                      {challenge.prompt}
+                      {challenge.title || challenge.prompt}
                     </option>
                   ))}
                 </select>
@@ -2783,8 +2797,8 @@ function ChallengeFeedback({
             <div className="feedback-challenge-details">
               <div className="feedback-challenge-header">
                 <div>
-                  <h3>{selectedChallenge.prompt}</h3>
-                  <p className="eyebrow">Type: {selectedChallenge.answer_type}</p>
+                  <h3>{selectedChallenge.title || selectedChallenge.prompt}</h3>
+                  <p className="feedback-hint">Your honest feedback helps us create better learning experiences</p>
                 </div>
                 <button
                   className="text-button"
@@ -2794,48 +2808,159 @@ function ChallengeFeedback({
                   ← Change challenge
                 </button>
               </div>
-              {studentsWithSubmissions.length > 0 ? (
-                <div className="student-submissions-list">
-                  <h4>Students with submissions ({studentsWithSubmissions.length})</h4>
-                  <ul>
-                    {studentsWithSubmissions.map((student) => {
-                      const submission = dashboard!.submissions.find(
-                        (sub) =>
-                          sub.challenge_id === selectedChallenge.id &&
-                          sub.student_id === student.id,
-                      )
-                      return (
-                        <li key={student.id}>
-                          <div className="submission-info">
-                            <strong>{student.display_name}</strong>
-                            <p className="submission-answer">
-                              {submission?.answer ? `Answer: ${submission.answer}` : 'No answer'}
-                            </p>
-                            {submission?.is_correct !== null && (
-                              <p className={`submission-status ${submission?.is_correct ? 'correct' : 'incorrect'}`}>
-                                {submission?.is_correct ? '✓ Correct' : '✗ Incorrect'}
-                              </p>
-                            )}
-                          </div>
-                          <button
-                            className="button button-secondary"
-                            type="button"
-                          >
-                            Give feedback
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ul>
+
+              <div className="feedback-question">
+                <label>
+                  <span className="feedback-label">How difficult was this challenge?</span>
+                  <div className="feedback-options">
+                    <label className="feedback-option">
+                      <input
+                        type="radio"
+                        name="difficulty"
+                        value="easy"
+                        checked={difficulty === 'easy'}
+                        onChange={(e) => setDifficulty(e.target.value as any)}
+                      />
+                      <span>🟢 Too easy</span>
+                    </label>
+                    <label className="feedback-option">
+                      <input
+                        type="radio"
+                        name="difficulty"
+                        value="medium"
+                        checked={difficulty === 'medium'}
+                        onChange={(e) => setDifficulty(e.target.value as any)}
+                      />
+                      <span>🟡 Just right</span>
+                    </label>
+                    <label className="feedback-option">
+                      <input
+                        type="radio"
+                        name="difficulty"
+                        value="hard"
+                        checked={difficulty === 'hard'}
+                        onChange={(e) => setDifficulty(e.target.value as any)}
+                      />
+                      <span>🔴 Too hard</span>
+                    </label>
+                  </div>
+                </label>
+              </div>
+
+              <div className="feedback-question">
+                <label>
+                  <span className="feedback-label">Was the challenge clear and easy to understand?</span>
+                  <div className="feedback-options">
+                    <label className="feedback-option">
+                      <input
+                        type="radio"
+                        name="clarity"
+                        value="clear"
+                        checked={clarity === 'clear'}
+                        onChange={(e) => setClarity(e.target.value as any)}
+                      />
+                      <span>✓ Very clear</span>
+                    </label>
+                    <label className="feedback-option">
+                      <input
+                        type="radio"
+                        name="clarity"
+                        value="somewhat"
+                        checked={clarity === 'somewhat'}
+                        onChange={(e) => setClarity(e.target.value as any)}
+                      />
+                      <span>◐ Somewhat clear</span>
+                    </label>
+                    <label className="feedback-option">
+                      <input
+                        type="radio"
+                        name="clarity"
+                        value="confusing"
+                        checked={clarity === 'confusing'}
+                        onChange={(e) => setClarity(e.target.value as any)}
+                      />
+                      <span>✗ Confusing</span>
+                    </label>
+                  </div>
+                </label>
+              </div>
+
+              <div className="feedback-question">
+                <label>
+                  <span className="feedback-label">Did you enjoy this challenge?</span>
+                  <div className="feedback-options">
+                    <label className="feedback-option">
+                      <input
+                        type="radio"
+                        name="enjoyment"
+                        value="loved"
+                        checked={enjoyment === 'loved'}
+                        onChange={(e) => setEnjoyment(e.target.value as any)}
+                      />
+                      <span>❤️ Loved it!</span>
+                    </label>
+                    <label className="feedback-option">
+                      <input
+                        type="radio"
+                        name="enjoyment"
+                        value="liked"
+                        checked={enjoyment === 'liked'}
+                        onChange={(e) => setEnjoyment(e.target.value as any)}
+                      />
+                      <span>👍 Liked it</span>
+                    </label>
+                    <label className="feedback-option">
+                      <input
+                        type="radio"
+                        name="enjoyment"
+                        value="okay"
+                        checked={enjoyment === 'okay'}
+                        onChange={(e) => setEnjoyment(e.target.value as any)}
+                      />
+                      <span>😐 It was okay</span>
+                    </label>
+                    <label className="feedback-option">
+                      <input
+                        type="radio"
+                        name="enjoyment"
+                        value="struggled"
+                        checked={enjoyment === 'struggled'}
+                        onChange={(e) => setEnjoyment(e.target.value as any)}
+                      />
+                      <span>😕 I struggled</span>
+                    </label>
+                  </div>
+                </label>
+              </div>
+
+              <div className="feedback-question">
+                <label className="field-label">
+                  <span>Anything else you'd like to share? (optional)</span>
+                  <textarea
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    placeholder="Your feedback helps us improve..."
+                    rows={4}
+                    maxLength={500}
+                  />
+                  <small>{feedbackText.length}/500</small>
+                </label>
+              </div>
+
+              {submitted && (
+                <div className="feedback-success">
+                  <span>✓ Thank you! Your feedback has been recorded.</span>
                 </div>
-              ) : (
-                <p className="no-submissions">
-                  No students have submitted answers for this challenge yet.
-                </p>
               )}
+
+              <div className="feedback-actions">
+                <button type="submit" className="button button-primary" disabled={submitted}>
+                  {submitted ? 'Feedback sent!' : 'Send feedback'}
+                </button>
+              </div>
             </div>
           )}
-        </div>
+        </form>
       </section>
     </div>
   )
