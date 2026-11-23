@@ -64,6 +64,7 @@ export function ChallengeForm({
   const [pendingChallengeId, setPendingChallengeId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
+  const [feedbackEnabled, setFeedbackEnabled] = useState(challenge?.feedback_enabled ?? false)
 
   useEffect(() => {
     if (!challenge || challenge.answer_type !== 'multiple_choice') return
@@ -137,6 +138,7 @@ export function ChallengeForm({
       answer_type: answerType,
       choices,
       is_published: false,
+      feedback_enabled: feedbackEnabled,
       program_day: challenge?.program_day ?? null,
       level: challenge?.level ?? null,
     }
@@ -433,6 +435,18 @@ export function ChallengeForm({
             <span>
               <strong>Publish now</strong>
               <small>Students can see and answer published challenges.</small>
+            </span>
+          </label>
+          <label className="publish-toggle">
+            <input
+              checked={feedbackEnabled}
+              onChange={(e) => setFeedbackEnabled(e.target.checked)}
+              name="feedbackEnabled"
+              type="checkbox"
+            />
+            <span>
+              <strong>Allow student feedback</strong>
+              <small>Students can rate difficulty, clarity, and share comments.</small>
             </span>
           </label>
           <footer className="modal-actions">

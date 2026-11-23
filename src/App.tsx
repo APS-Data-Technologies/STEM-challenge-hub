@@ -348,6 +348,7 @@ function App() {
   >({})
   const [wrongAttempts, setWrongAttempts] = useState<Record<string, number>>({})
   const [showChallengeFeedback, setShowChallengeFeedback] = useState(false)
+  const [selectedFeedbackChallengeId, setSelectedFeedbackChallengeId] = useState<string | null>(null)
 
   useEffect(() => {
     document.documentElement.dataset.displayMode = displayMode
@@ -1826,7 +1827,11 @@ function App() {
           challenges={dashboard.challenges.filter((c) => c.is_published)}
           classRecord={selectedClass}
           dashboard={dashboard}
-          onCancel={() => setShowChallengeFeedback(false)}
+          preselectedChallengeId={selectedFeedbackChallengeId}
+          onCancel={() => {
+            setShowChallengeFeedback(false)
+            setSelectedFeedbackChallengeId(null)
+          }}
         />
       ) : null}
       {showProfile ? (
@@ -2338,15 +2343,20 @@ function StudentDashboard({
                 </div>
               ) : null}
             </form>
-            <div className="challenge-feedback-action">
-              <button
-                className="button button-secondary"
-                onClick={() => setShowChallengeFeedback(true)}
-                type="button"
-              >
-                <span aria-hidden="true">💬</span> Send feedback
-              </button>
-            </div>
+            {challenge.feedback_enabled && !isTeacher ? (
+              <div className="challenge-feedback-action">
+                <button
+                  className="button button-secondary"
+                  onClick={() => {
+                    setSelectedFeedbackChallengeId(challenge.id)
+                    setShowChallengeFeedback(true)
+                  }}
+                  type="button"
+                >
+                  <span aria-hidden="true">💬</span> Send feedback
+                </button>
+              </div>
+            ) : null}
           </article>
         )
       })}
@@ -2720,34 +2730,59 @@ function ChallengeFeedback({
   challenges,
   classRecord,
   dashboard,
+  preselectedChallengeId,
   onCancel,
 }: {
   challenges: Challenge[]
   classRecord: ClassRecord
   dashboard: Dashboard | null
+  preselectedChallengeId?: string | null
   onCancel: () => void
 }) {
-  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null)
+  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(preselectedChallengeId ?? null)
   const [feedbackText, setFeedbackText] = useState('')
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
   const [clarity, setClarity] = useState<'clear' | 'somewhat' | 'confusing'>('clear')
   const [enjoyment, setEnjoyment] = useState<'loved' | 'liked' | 'okay' | 'struggled'>('liked')
   const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
 
   const selectedChallenge = challenges.find((c) => c.id === selectedChallengeId)
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    // Here you would save the feedback to the database
-    setSubmitted(true)
-    setTimeout(() => {
-      setSubmitted(false)
-      setSelectedChallengeId(null)
-      setFeedbackText('')
-      setDifficulty('medium')
-      setClarity('clear')
-      setEnjoyment('liked')
-    }, 2000)
+    setError('')
+    try {
+      // Save feedback to database via Supabase
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          challenge_id: selectedChallengeId,
+          difficulty,
+          clarity,
+          enjoyment,
+          comment: feedbackText || null,
+        }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to submit feedback')
+      }
+
+      setSubmitted(true)
+      setTimeout(() => {
+        setSubmitted(false)
+        setSelectedChallengeId(null)
+        setFeedbackText('')
+        setDifficulty('medium')
+        setClarity('clear')
+        setEnjoyment('liked')
+        onCancel()
+      }, 2000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    }
   }
 
   return (
@@ -2775,6 +2810,7 @@ function ChallengeFeedback({
           </button>
         </header>
         <form className="feedback-content" onSubmit={handleSubmit}>
+          {error && <div className="form-error">{error}</div>}
           {!selectedChallenge ? (
             <div>
               <label className="field-label">

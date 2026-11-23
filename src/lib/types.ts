@@ -8,6 +8,17 @@ export interface AnswerFeedback {
   message: string
 }
 
+export interface ChallengeFeedbackResponse {
+  id: string
+  challenge_id: string
+  student_id: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  clarity: 'clear' | 'somewhat' | 'confusing'
+  enjoyment: 'loved' | 'liked' | 'okay' | 'struggled'
+  comment: string | null
+  submitted_at: string
+}
+
 export interface Profile {
   id: string
   role: UserRole
@@ -43,6 +54,7 @@ export interface Challenge {
   answer_type: AnswerType
   choices: string[] | null
   is_published: boolean
+  feedback_enabled?: boolean
   program_day: number | null
   level: DailyLevel | null
   hint_level_1?: string | null
