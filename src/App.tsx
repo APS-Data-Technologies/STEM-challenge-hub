@@ -667,7 +667,7 @@ function App() {
         const { data: challengeRows, error: challengeError } = await supabase
           .from('challenges')
           .select(
-            'id, class_id, title, prompt, subject, grade_band, answer_type, choices, is_published, program_day, level, created_at',
+            'id, class_id, title, prompt, subject, grade_band, answer_type, choices, is_published, program_day, level, created_at, feedback_enabled, hint_level_1, hint_level_2, hint_level_3',
           )
           .eq('class_id', selectedClassId)
           .order('created_at', { ascending: false })
@@ -1758,6 +1758,8 @@ function App() {
                     }))
                   }
                   onSubmit={submitAnswer}
+                  setSelectedFeedbackChallengeId={setSelectedFeedbackChallengeId}
+                  setShowChallengeFeedback={setShowChallengeFeedback}
                 />
               )}
             </>
@@ -1825,8 +1827,6 @@ function App() {
       {showChallengeFeedback && selectedClass && dashboard ? (
         <ChallengeFeedback
           challenges={dashboard.challenges.filter((c) => c.is_published)}
-          classRecord={selectedClass}
-          dashboard={dashboard}
           preselectedChallengeId={selectedFeedbackChallengeId}
           supabase={supabase!}
           onCancel={() => {
@@ -2135,12 +2135,16 @@ function StudentDashboard({
   answerFeedback,
   onAnswerChange,
   onSubmit,
+  setSelectedFeedbackChallengeId,
+  setShowChallengeFeedback,
 }: {
   dashboard: DashboardData | null
   answerDrafts: Record<string, string>
   answerFeedback: Record<string, AnswerFeedback>
   onAnswerChange: (challengeId: string, answer: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>, challenge: Challenge) => void
+  setSelectedFeedbackChallengeId: (id: string | null) => void
+  setShowChallengeFeedback: (show: boolean) => void
 }) {
   const [filter, setFilter] = useState<'all' | 'todo' | 'done'>('all')
   const [query, setQuery] = useState('')
@@ -2344,7 +2348,7 @@ function StudentDashboard({
                 </div>
               ) : null}
             </form>
-            {challenge.feedback_enabled && !isTeacher ? (
+            {challenge.feedback_enabled ? (
               <div className="challenge-feedback-action">
                 <button
                   className="button button-secondary"
@@ -2736,15 +2740,11 @@ function ClassManagement({
 
 function ChallengeFeedback({
   challenges,
-  classRecord,
-  dashboard,
   preselectedChallengeId,
   supabase,
   onCancel,
 }: {
   challenges: Challenge[]
-  classRecord: ClassRecord
-  dashboard: Dashboard | null
   preselectedChallengeId?: string | null
   supabase: SupabaseClient
   onCancel: () => void

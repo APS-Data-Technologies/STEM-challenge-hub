@@ -626,8 +626,8 @@ function ProgramForm({ program, busy, onSave, onCancel, classRecord }: {
   }
   
   // Auto-populate subject and grade band from class
-  const defaultSubject = program?.subject ?? 'Science'
-  const defaultGradeBand = program?.grade_band ?? classRecord?.grade_band ?? 'K-2'
+  // const defaultSubject = program?.subject ?? 'Science'
+  // const defaultGradeBand = program?.grade_band ?? classRecord?.grade_band ?? 'K-2'
   
   // Map class grade band to daily program grade band
   const getDefaultGradeBand = () => {

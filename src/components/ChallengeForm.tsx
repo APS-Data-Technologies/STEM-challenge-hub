@@ -7,12 +7,6 @@ import type {
   GradeBand,
   Subject,
 } from '../lib/types'
-const subjects: Subject[] = [
-  'Science',
-  'Technology',
-  'Engineering',
-  'Math',
-]
 const gradeBands: GradeBand[] = ['K-2', '3-5', '6-8', '9-12']
 
 export function ChallengeForm({
