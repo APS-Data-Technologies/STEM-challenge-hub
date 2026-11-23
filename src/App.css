@@ -2726,6 +2726,13 @@ body {
   letter-spacing: -0.06em;
 }
 
+.summary-card-text strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
 .table-scroll {
   border-color: #e0e7ef;
   border-radius: 0.95rem;

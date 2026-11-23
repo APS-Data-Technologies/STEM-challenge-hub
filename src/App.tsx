@@ -2468,11 +2468,15 @@ function ProgressTable({
       submission.is_correct === null
     )
   }).length
-  const studentsNeedingHelp = new Set(
+  const studentsNeedingHelpIds = new Set(
     submissions
       .filter((submission) => submission.is_correct === false)
       .map((submission) => submission.student_id),
-  ).size
+  )
+  const studentsNeedingHelpNames = members
+    .filter((member) => studentsNeedingHelpIds.has(member.id))
+    .map((member) => member.display_name)
+    .sort()
 
   if (members.length === 0) {
     return (
@@ -2516,7 +2520,8 @@ function ProgressTable({
         <SummaryCard label="Short answers to review" value={String(reviewCount)} />
         <SummaryCard
           label="Students who may need help"
-          value={String(studentsNeedingHelp)}
+          value={studentsNeedingHelpNames.length > 0 ? studentsNeedingHelpNames.join(', ') : 'None'}
+          isTextValue={true}
         />
       </div>
       <div className="table-scroll">
@@ -2609,13 +2614,15 @@ function SummaryCard({
   label,
   value,
   detail,
+  isTextValue,
 }: {
   label: string
   value: string
   detail?: string
+  isTextValue?: boolean
 }) {
   return (
-    <article className="summary-card">
+    <article className={`summary-card${isTextValue ? ' summary-card-text' : ''}`}>
       <span>{label}</span>
       <strong>{value}</strong>
       {detail ? <small>{detail}</small> : null}

@@ -255,7 +255,11 @@ export function AuthScreen({
                           onClick={() => {
                             if (nextRole === role) return
                             const email = formRef.current?.querySelector<HTMLInputElement>('input[name="email"]')
+                            const password = formRef.current?.querySelector<HTMLInputElement>('input[name="password"]')
+                            const displayName = formRef.current?.querySelector<HTMLInputElement>('input[name="displayName"]')
                             if (email) email.value = ''
+                            if (password) password.value = ''
+                            if (displayName) displayName.value = ''
                             setRole(nextRole)
                             onError('')
                             setNotice('')
@@ -361,6 +365,10 @@ export function AuthScreen({
                 <button
                   disabled={pending}
                   onClick={() => {
+                    if (formRef.current) {
+                      const inputs = formRef.current.querySelectorAll<HTMLInputElement>('input[type="text"], input[type="email"], input[type="password"]')
+                      inputs.forEach((input) => { input.value = '' })
+                    }
                     setMode(mode === 'signin' ? 'signup' : 'signin')
                     onError('')
                     setNotice('')
