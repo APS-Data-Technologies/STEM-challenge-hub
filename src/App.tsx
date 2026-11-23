@@ -1829,6 +1829,7 @@ function App() {
           challenges={dashboard.challenges.filter((c) => c.is_published)}
           preselectedChallengeId={selectedFeedbackChallengeId}
           supabase={supabase!}
+          userId={profile!.id}
           onCancel={() => {
             setShowChallengeFeedback(false)
             setSelectedFeedbackChallengeId(null)
@@ -2742,11 +2743,13 @@ function ChallengeFeedback({
   challenges,
   preselectedChallengeId,
   supabase,
+  userId,
   onCancel,
 }: {
   challenges: Challenge[]
   preselectedChallengeId?: string | null
   supabase: SupabaseClient
+  userId: string
   onCancel: () => void
 }) {
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(preselectedChallengeId ?? null)
@@ -2768,6 +2771,7 @@ function ChallengeFeedback({
         .from('challenge_feedback')
         .upsert({
           challenge_id: selectedChallengeId,
+          student_id: userId,
           difficulty,
           clarity,
           enjoyment,
