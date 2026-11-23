@@ -45,6 +45,9 @@ create table public.classes (
 );
 
 -- ---------- enrollments (no duplicates) -------------------------------
+-- IMPORTANT: This table has NO id column. Primary key is (class_id, student_id).
+-- When counting or aggregating, use COUNT(DISTINCT student_id) or COUNT(DISTINCT class_id).
+-- Never try to select 'id' from this table - it does not exist.
 create table public.enrollments (
   class_id    uuid not null references public.classes(id) on delete cascade,
   student_id  uuid not null references public.profiles(id) on delete cascade,

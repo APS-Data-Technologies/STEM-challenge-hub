@@ -48,6 +48,17 @@ returns boolean language sql stable security definer set search_path = '' as $$
   );
 $$;
 
+-- NOTE: enrollments table has NO id column. It has only (class_id, student_id).
+-- Always count or aggregate using student_id or class_id, never try to select id.
+-- Example: SELECT COUNT(DISTINCT student_id) FROM enrollments WHERE class_id = ...
+--
+-- Helper function to safely count students in a class:
+create or replace function public.count_class_enrollments(p_class_id uuid)
+returns integer language sql stable security definer set search_path = '' as $$
+  select count(distinct student_id)::integer from public.enrollments
+  where class_id = p_class_id;
+$$;
+
 -- ---------- profiles ---------------------------------------------------
 -- Teacher: read/edit own; read names of students in their classes.
 -- Student: read/edit own only. Nobody can change their own role.
