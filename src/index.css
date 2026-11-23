@@ -1,27 +1,62 @@
 :root {
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    sans-serif;
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, 'Helvetica Neue', sans-serif;
   color: #0f172a;
-  background: #f7f6f0;
+  background: #f8f9fb;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
+  /* Premium Color Palette */
   --ink: #0f172a;
-  --muted: #475569;
-  --green: #3155e9;
-  --green-dark: #2346d2;
-  --line: #e2e8f0;
-  --coral: #f17862;
-  --sunshine: #facc15;
-  --primary: #3155e9;
+  --muted: #64748b;
+  --primary: #3f5bff;
+  --primary-light: #4f6bff;
+  --primary-dark: #2f4be8;
+  --secondary: #06b6d4;
+  --accent: #f97316;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #3f5bff 0%, #4f6bff 50%, #06b6d4 100%);
+  --gradient-accent: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  --gradient-success: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  --gradient-hover: linear-gradient(135deg, #2f4be8 0%, #3f5bff 50%, #0891b2 100%);
+  
+  /* Neutrals */
+  --white: #ffffff;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  
+  /* Semantic Colors */
+  --line: #e5e7eb;
+  --border: #d1d5db;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --page-background: #f8f9fb;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #9ca3af;
+  
+  /* Legacy colors for compatibility */
+  --green: #3f5bff;
+  --green-dark: #2f4be8;
+  --coral: #f97316;
+  --sunshine: #fbbf24;
   --navy: #0f172a;
-  --text-muted: #475569;
-  --yellow: #facc15;
-  --blue-tint: #eff4ff;
-  --page-background: #f7f6f0;
+  --yellow: #fbbf24;
+  --blue-tint: #eff6ff;
 }
 
 * {
