@@ -11545,6 +11545,11 @@ html[data-display-mode='dyslexia-friendly'] i {
   color: #414b76;
 }
 
+.teacher-class-shell .workspace-page-heading .manage-class-button,
+.teacher-class-shell .class-heading-actions .button-secondary {
+  min-height: 2.6rem;
+}
+
 .teacher-class-shell .workspace-page-heading .join-code strong {
   color: #433bb6;
 }
