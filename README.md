@@ -1,53 +1,755 @@
-# STEM-challenge-hub
-TEAM A
 # STEM Challenge Hub
 
-A lightweight, mobile-friendly web app where K-12 teachers post short STEM challenges, students submit answers, and teachers see class progress.
+A comprehensive web-based educational platform for K-12 teachers and students to create, manage, and solve STEM (Science, Technology, Engineering, Mathematics) challenges with real-time feedback and progress tracking.
 
-Built by a Judson University student team as part of the **Fall 2026 APS Data Technologies Internship** (Oct 26 – Dec 11, 2026).
-
-🔗 **Live app:** _coming soon (Vercel link)_
-🎨 **Figma:** [STEM Challenge Hub](https://www.figma.com/design/Zd8MtyHyHS572maRVCAl9u/STEM-Challenge-Hub?node-id=27-2&t=nVBc4dz7RhfkKLmz-1)
-
-> ⚠️ **Demo project, fictional data only.** This app uses made-up teachers, students and classes (`@example.com` accounts). Never enter real student or teacher names, emails or records.
+**Live Demo**: [STEM Challenge Hub](http://localhost:5173/) | **Latest Build**: `dev-arun`
 
 ---
 
-## Table of contents
+## Table of Contents
 
-- [The problem](#the-problem)
-- [Features](#features)
-- [Tech stack](#tech-stack)
-- [How it works](#how-it-works)
-- [Getting started](#getting-started)
-- [Database](#database)
-- [How we work](#how-we-work)
-- [Testing](#testing)
-- [Timeline](#timeline)
-- [Team](#team)
+1. [Overview](#overview)
+2. [Key Features](#key-features)
+3. [Getting Started](#getting-started)
+4. [User Roles](#user-roles)
+5. [Core Functionalities](#core-functionalities)
+6. [Technical Stack](#technical-stack)
+7. [Database Schema](#database-schema)
+8. [Accessibility](#accessibility)
+9. [Testing Guide](#testing-guide)
+10. [Deployment](#deployment)
+11. [Support & Coordination](#support--coordination)
 
 ---
 
-## The problem
+## Overview
 
-Teachers want quick ways to give hands-on practice (a math puzzle, a science prediction, a coding logic question) and see who is getting it. Most tools are too complex or too expensive for a single classroom. STEM Challenge Hub keeps it simple.
+STEM Challenge Hub is an interactive learning platform designed to:
+- **For Teachers**: Create and manage STEM challenges, track student progress, provide feedback
+- **For Students**: Solve challenges at their own pace, receive instant feedback, build learning streaks
+- **For Schools**: Support K-12 STEM curriculum with grade-specific, subject-aligned content
 
-**Users:** K-12 STEM teachers and their students.
+The platform supports multiple challenge formats (multiple-choice and short-answer) with built-in features for classroom management, student progress tracking, and adaptive feedback systems.
 
-## Features
+---
 
-### Must-haves (v1.0)
+## Key Features
 
-| # | Feature | What it does |
-|---|---------|--------------|
-| 1 | **Sign in with two roles** | Teacher and student accounts with email password recovery. Select the account's role when signing in or creating an account. Teachers choose a grade group on their dashboard; students land on *My challenges*. Students can't open teacher pages. |
-| 2 | **Create a challenge** | Teachers create, edit and delete challenges with a subject (Science, Technology, Engineering, Math), grade band and answer type (multiple choice or short answer). |
-| 3 | **Join a class** | Each class gets a unique ~6-character join code. Students enter it to see that class's challenges. |
-| 4 | **Submit answers** | Students get immediate correct/try-again feedback for multiple-choice answers. Short answers are saved for teacher review. |
-| 5 | **Teacher progress view** | A table with one row per student and one column per challenge, showing not started, awaiting review for short answers, or correct/incorrect. |
-| 6 | **Live on the web** | Public link that works on phone, tablet and laptop (Chrome and Safari). |
+### 🎯 For Teachers
 
-### Frontend coverage
+#### Classroom Management
+- Create and manage multiple classes across different grade bands
+- Invite students via unique class codes
+- Remove students or manage class enrollment
+- Support for grades K-12 with grade-specific content
+
+#### Individual Challenges
+- Create challenges with:
+  - Multiple-choice questions (2-6 options)
+  - Short-answer questions (teacher reviews submissions)
+  - Three difficulty levels: Easy, Medium, Hard
+  - Subject alignment (Science, Technology, Engineering, Math)
+  - Grade band targeting (K-2, 3-5, 6-8, 9-12)
+- **Auto-populated fields**: Subject and grade automatically filled based on classroom
+- Publish/unpublish challenges instantly
+- Enable student feedback collection (optional, teacher-controlled)
+- Review student submissions with one-click answer marking
+
+#### Daily Programs (Streak Challenges)
+- Create multi-day challenge programs
+- Configure opening times with **timezone support** (CST, EST, MST, PST)
+- Set daily question counts by difficulty level
+- Track completion rates and student streaks
+- Monitor student performance across days
+
+#### Progress Tracking
+- **Class Progress Dashboard** showing:
+  - Total enrolled students
+  - Multiple-choice accuracy percentage
+  - Number of short answers pending review
+  - **Student names who may need help** (displayed alphabetically, not just count)
+- Student-by-challenge grid with submission status
+- Detailed submission review with feedback capability
+
+#### Messaging System
+- Create class-wide messages with types:
+  - **Announcement**: General classroom updates
+  - **Description**: Challenge instructions
+  - **Guidelines**: Learning guidelines
+- Messages with optional media/attachments
+
+#### Student Feedback System
+- **Teacher Control**: Toggle feedback collection on/off per challenge
+- **Student Input**: Rate challenges on:
+  - Difficulty (1-5)
+  - Clarity (1-5)
+  - Enjoyment (1-5)
+- RLS-secured data collection (students can't access others' feedback)
+- One feedback per student per challenge
+
+---
+
+### 👨‍🎓 For Students
+
+#### Challenge Solving
+- Browse **"Get Ready for the Challenge"** section with available challenges
+- Solve multiple-choice challenges with instant feedback
+- Submit short-answer responses for teacher review
+- Receive corrective feedback on wrong answers with progressive hints
+- One final submission attempt after hints
+
+#### Daily Streaks
+- Access **"Daily Streak Program"** for time-gated daily challenges
+- Each day's challenges open at teacher-configured time in their timezone
+- Build daily completion streaks
+- Track longest streak achievement
+- View day-by-day progress and difficulty levels
+
+#### Accessibility Features
+- Display modes: Default, Color-blind friendly, Dyslexia-friendly
+- Read-aloud capability for all text content
+- Keyboard-navigable interface
+- Clear status announcements and feedback
+
+#### Profile Management
+- Customizable display name
+- Optional profile photo
+- Account role selection (Teacher/Student at login)
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Supabase account (for backend services)
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/APS-Data-Technologies/STEM-challenge-hub.git
+cd STEM-challenge-hub
+
+# Install dependencies
+npm install
+
+# Configure environment variables
+# Create .env file with:
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Start development server
+npm run dev
+# App will be available at http://localhost:5173
+```
+
+### Build for Production
+
+```bash
+npm run build
+# Output in dist/ directory
+
+# Preview production build
+npm run preview
+```
+
+---
+
+## User Roles
+
+### Teacher Account
+- **Sign Up**: Choose "Teacher" role, create account with email and password
+- **Capabilities**: 
+  - Create and manage classes
+  - Create challenges and daily programs
+  - Review student submissions
+  - Track class progress
+  - Send messages to class
+  - Enable feedback collection
+
+### Student Account
+- **Sign Up**: Choose "Student" role, create account with email and password
+- **Capabilities**:
+  - Join classes with class code
+  - Solve assigned challenges
+  - Participate in daily programs
+  - View progress
+  - Submit feedback (if enabled by teacher)
+
+---
+
+## Core Functionalities
+
+### 1. Authentication & Authorization
+- **Sign Up / Sign In**: Email/password authentication via Supabase Auth
+- **Role-Based Access Control**: Teacher/Student role assignment
+- **Login ID Handling**: Form fields properly cleared on account switching (prevents ID leakage)
+- **Session Persistence**: Automatic session recovery on refresh
+
+### 2. Challenge Management
+
+#### Creating a Challenge
+```
+Teacher → Select Class → "Individual Challenges" → "Create a Challenge"
+1. Title & Prompt (auto-filled: Subject = Science, Grade from class)
+2. Answer Type (Multiple Choice or Short Answer)
+3. Difficulty Level (Easy/Medium/Hard)
+4. Options:
+   - Multiple Choice: 2-6 options, one correct answer
+   - Short Answer: Teacher reviews submissions
+5. Enable Feedback (optional): Students can provide feedback on challenge
+6. Publish when ready
+```
+
+#### Reviewing Submissions
+```
+Teacher → Class → "Class Progress" → Select Student/Challenge
+1. View student's answer
+2. See submission time and attempt count
+3. For Short Answers: Mark as Correct/Incorrect or pending review
+4. Provide feedback (optional)
+5. See aggregate statistics
+```
+
+### 3. Daily Programs
+
+#### Creating a Daily Program
+```
+Teacher → Select Class → "Daily Programs" → "Create a Daily Program"
+1. Program Title
+2. Grade (auto-populated from class)
+3. Number of Days (1-100)
+4. Start Date
+5. Daily Opening Time (e.g., 9:00 AM)
+6. Time Zone Selection:
+   - CST (Central): America/Chicago
+   - EST (Eastern): America/New_York
+   - MST (Mountain): America/Denver
+   - PST (Pacific): America/Los_Angeles
+7. Question Distribution:
+   - Easy: N questions
+   - Medium: N questions
+   - Hard: N questions
+8. Total questions checked: Recommended 1-10 per day
+```
+
+#### Creating Daily Questions
+```
+For Each Day:
+1. Day Number
+2. Question Order Slot
+3. Difficulty Level
+4. Title & Prompt
+5. Answer Type (MC or Short Answer)
+6. For MC: 2-6 options with one correct answer
+```
+
+#### Student Experience
+```
+Student → Class → "Daily Streak Program"
+1. See opening time for each day in their timezone
+2. Access next day's challenges when time arrives
+3. Answer all questions for the day
+4. View daily badge when completed on time
+5. Build streak counter
+6. Track longest streak achievement
+```
+
+### 4. Progress Tracking
+
+#### Class Progress Dashboard
+```
+Teacher → Class → "Class Progress"
+Shows:
+1. Total Students: X enrolled
+2. Multiple-Choice Accuracy: Y% (Z correct of A evaluated)
+3. Short Answers to Review: N pending
+4. Students Who May Need Help: [Names] (sorted alphabetically)
+5. Detailed grid showing:
+   - Each student (rows)
+   - Each challenge (columns)
+   - Submission status: Not started / Awaiting review / Correct / Incorrect
+```
+
+### 5. Student Feedback System
+
+#### Teacher Setup
+```
+Create Challenge → Enable "Allow student feedback" checkbox → Save
+```
+
+#### Student Feedback
+```
+Student → Completed Challenge → "Feedback" button appears
+1. Rate Difficulty (1-5 scale)
+2. Rate Clarity (1-5 scale)
+3. Rate Enjoyment (1-5 scale)
+4. Submit (one per student per challenge)
+5. Success confirmation shown
+```
+
+#### Teacher View
+```
+Challenge Management → View Challenge
+- See feedback toggle status
+- View aggregate student feedback (future feature)
+```
+
+### 6. Accessibility Features
+
+#### Display Modes
+- **Default**: Standard high-contrast design
+- **Color-Blind Friendly**: Enhanced contrast, deuteranopia-safe colors
+- **Dyslexia-Friendly**: Sans-serif font, increased spacing, reduced clutter
+
+#### Read-Aloud
+- Toggle on login screen
+- Reads all challenge content, buttons, and feedback
+- Adjustable playback speed (0.9x)
+- Clear pause on navigation
+
+#### Keyboard Navigation
+- Tab/Shift+Tab: Move between controls
+- Enter/Space: Activate buttons
+- Arrow Keys: Navigate options
+- Escape: Close modals (future enhancement)
+
+---
+
+## Technical Stack
+
+### Frontend
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite (fast development, optimized production builds)
+- **Styling**: CSS3 with custom design system
+- **State Management**: React Hooks (useState, useCallback, useEffect, useRef)
+- **HTTP Client**: Supabase JavaScript SDK
+
+### Backend
+- **Database**: PostgreSQL (via Supabase)
+- **Authentication**: Supabase Auth (JWT-based)
+- **Real-time APIs**: Supabase PostgREST
+- **Row-Level Security**: PostgreSQL RLS policies
+- **Storage**: Supabase Storage (profile photos)
+
+### DevOps & Deployment
+- **Version Control**: Git
+- **Repository**: GitHub (APS-Data-Technologies/STEM-challenge-hub)
+- **CI/CD**: GitHub Actions (available)
+- **Hosting**: Vercel / Netlify compatible
+
+---
+
+## Database Schema
+
+### Core Tables
+
+#### `profiles`
+- `id` (UUID, PK): User ID from Supabase Auth
+- `role` (TEXT): 'teacher' or 'student'
+- `display_name` (TEXT): User's display name
+- `avatar_path` (TEXT, nullable): Path to profile photo
+- `created_at` (TIMESTAMP)
+
+#### `classes`
+- `id` (UUID, PK): Unique class identifier
+- `teacher_id` (UUID, FK): Teacher who created class
+- `name` (TEXT): Class name (e.g., "Grade 3 Science")
+- `join_code` (TEXT): 6-character code for student enrollment
+- `grade_band` (TEXT): 'K-5', '6-8', or '9-12'
+- `is_archived` (BOOLEAN): Soft delete flag
+- `created_at` (TIMESTAMP)
+
+#### `enrollments`
+- `id` (UUID, PK)
+- `class_id` (UUID, FK): Class being joined
+- `student_id` (UUID, FK): Student joining
+- `enrolled_at` (TIMESTAMP)
+
+#### `challenges`
+- `id` (UUID, PK)
+- `class_id` (UUID, FK): Associated class
+- `created_by` (UUID, FK): Teacher who created
+- `title` (TEXT): Challenge title
+- `prompt` (TEXT): Challenge description
+- `subject` (TEXT): 'Science', 'Technology', 'Engineering', or 'Math'
+- `grade_band` (TEXT): 'K-2', '3-5', '6-8', '9-12'
+- `answer_type` (TEXT): 'multiple_choice' or 'short_answer'
+- `choices` (JSONB): Array of choices for MC (null for short answer)
+- `is_published` (BOOLEAN): Live vs. draft
+- `program_day` (SMALLINT, nullable): For daily programs (1-100)
+- `level` (TEXT, nullable): Difficulty when in daily program
+- `feedback_enabled` (BOOLEAN): Allow student feedback collection
+- `created_at` (TIMESTAMP)
+
+#### `challenge_keys`
+- `challenge_id` (UUID, PK, FK): The challenge
+- `correct_choice` (TEXT): Correct answer (must match a choice exactly)
+
+#### `submissions`
+- `id` (UUID, PK)
+- `challenge_id` (UUID, FK)
+- `student_id` (UUID, FK)
+- `answer` (TEXT): Student's submitted answer
+- `is_correct` (BOOLEAN, nullable): null for pending review, true/false for graded
+- `submitted_at` (TIMESTAMP)
+
+#### `challenge_feedback`
+- `id` (UUID, PK)
+- `challenge_id` (UUID, FK)
+- `student_id` (UUID, FK)
+- `difficulty_rating` (SMALLINT): 1-5
+- `clarity_rating` (SMALLINT): 1-5
+- `enjoyment_rating` (SMALLINT): 1-5
+- `submitted_at` (TIMESTAMP)
+- **Constraints**: One feedback per student per challenge
+
+#### `daily_programs`
+- `id` (UUID, PK)
+- `class_id` (UUID, FK)
+- `title` (TEXT)
+- `subject` (TEXT)
+- `grade_band` (TEXT)
+- `days` (SMALLINT): Number of days (1-100)
+- `start_date` (DATE)
+- `start_time` (TIME): Opening time each day
+- `time_zone` (TEXT): IANA timezone (e.g., 'America/Chicago')
+- `easy_count`, `medium_count`, `hard_count` (SMALLINT)
+- `is_published` (BOOLEAN)
+- `created_at` (TIMESTAMP)
+
+#### `daily_questions`
+- `id` (UUID, PK)
+- `program_id` (UUID, FK)
+- `day_number` (SMALLINT): Which day
+- `position` (SMALLINT): Order on that day
+- `level` (TEXT): 'Easy', 'Medium', 'Hard'
+- `title` (TEXT)
+- `prompt` (TEXT)
+- `answer_type` (TEXT): 'multiple_choice' or 'short_answer'
+- `choices` (JSONB, nullable)
+- `created_at` (TIMESTAMP)
+
+#### `daily_answers`
+- `id` (UUID, PK)
+- `question_id` (UUID, FK)
+- `student_id` (UUID, FK)
+- `answer` (TEXT)
+- `is_correct` (BOOLEAN)
+- `first_submitted_at` (TIMESTAMP)
+
+#### `class_messages`
+- `id` (UUID, PK)
+- `class_id` (UUID, FK)
+- `created_by` (UUID, FK)
+- `type` (TEXT): 'Announcement', 'Description', or 'Guidelines'
+- `heading` (TEXT)
+- `content` (TEXT)
+- `created_at` (TIMESTAMP)
+
+### Database Functions & Triggers
+
+#### `daily_program_opens_at()`
+Calculates when a specific day of a daily program opens in the program's timezone.
+
+#### `handle_new_user()`
+Automatic profile creation on signup with role and display_name from auth metadata.
+
+---
+
+## Accessibility
+
+### WCAG 2.1 Compliance
+- **AA Level**: Meeting accessibility standards for K-12 educational platform
+- Semantic HTML structure
+- ARIA labels for interactive elements
+- Color contrast ratios ≥4.5:1
+
+### Features for Neurodivergent Users
+- **Dyslexia-Friendly Mode**: 
+  - OpenDyslexic font approximation
+  - Increased letter spacing (0.12em)
+  - Line height 1.5
+  - Reduced visual clutter
+  
+- **Color-Blind Mode**:
+  - Deuteranopia-safe palette
+  - Pattern-based status indicators (not color-only)
+  - High contrast (≥7:1)
+
+- **Read-Aloud**:
+  - Native Web Speech API
+  - 0.9x speed setting (easier to follow)
+  - Covers all content areas
+
+### Keyboard Navigation
+- Full keyboard support for all features
+- Visible focus indicators
+- Logical tab order
+- No keyboard traps
+
+---
+
+## Testing Guide
+
+### Test Accounts (Fictional - for Demo)
+
+#### Teacher Account
+- **Email**: `teacher@stemhub.edu`
+- **Password**: `SecurePass123!`
+- **Role**: Teacher
+- **Display Name**: "Mrs. Johnson"
+
+#### Student Accounts
+1. **Email**: `student1@stemhub.edu` | **Password**: `StudentPass123!` | **Name**: "Alex Chen"
+2. **Email**: `student2@stemhub.edu` | **Password**: `StudentPass123!` | **Name**: "Maria Garcia"
+3. **Email**: `student3@stemhub.edu` | **Password**: `StudentPass123!` | **Name**: "James Smith"
+
+### End-to-End Test Scenarios
+
+#### Scenario 1: Teacher Setup & Class Creation ✅
+1. Sign in as teacher (Mrs. Johnson)
+2. Create class: "Grade 3 Science"
+3. Verify auto-populated grade band
+4. Share class code with students
+5. See 0 enrolled students initially
+
+#### Scenario 2: Student Enrollment ✅
+1. Sign in as Student 1 (Alex Chen)
+2. Enter class code from teacher's class
+3. Verify class appears in "My Classes"
+4. Repeat for Student 2 and Student 3
+5. Teacher views class → "Students who may need help: None"
+
+#### Scenario 3: Create Individual Challenges ✅
+1. Teacher → Select Class → "Individual Challenges" → Create
+2. Test MC Challenge:
+   - Title: "What's the main function of photosynthesis?"
+   - Choices: a) Energy, b) Growth, c) Reproduction, d) Movement
+   - Correct: a) Energy
+   - Difficulty: Medium
+   - Enable Feedback: ✓
+3. Test Short Answer Challenge:
+   - Title: "Explain the water cycle"
+   - Difficulty: Hard
+   - Enable Feedback: ✓
+4. Publish both challenges
+5. Verify in "Class Progress"
+
+#### Scenario 4: Student Solves MC Challenge ✅
+1. Student 1 (Alex) → "Get Ready for the Challenge"
+2. See photosynthesis challenge
+3. Submit WRONG answer → See corrective feedback + hint
+4. Try again → Submit CORRECT answer
+5. See success message
+6. Click "Feedback" button
+7. Rate: Difficulty 4, Clarity 5, Enjoyment 4
+8. Submit feedback → Confirmation shown
+
+#### Scenario 5: Student Attempts Short Answer ✅
+1. Student 1 → Solve water cycle challenge
+2. Type answer: "Water evaporates, rises, cools, condenses, falls as rain"
+3. Submit → "Awaiting review"
+4. Wait for teacher feedback
+
+#### Scenario 6: Teacher Reviews & Marks Submissions ✅
+1. Teacher → Class → "Class Progress"
+2. See: "Students who may need help: None" (no wrong answers yet)
+3. See short answer count: 1 pending review
+4. Click on Student 1's water cycle submission
+5. Mark as "Correct" or "Incorrect"
+6. Add optional feedback
+7. Mark complete
+
+#### Scenario 7: Create Daily Program ✅
+1. Teacher → "Daily Programs" → "Create"
+2. Title: "10-Day Energy Challenge"
+3. Grade: Auto-filled to "Kindergarten" through "Grade 5"
+4. Number of Days: 10
+5. Start Date: Today
+6. Time: 9:00 AM
+7. **Time Zone**: Select CST (Central)
+8. Questions: 2 Easy, 1 Medium, 1 Hard per day
+9. Publish
+10. Create questions for Days 1-3
+
+#### Scenario 8: Student Accesses Daily Program ✅
+1. Student 2 (Maria) → "Daily Streak Program"
+2. See Energy Challenge listed
+3. See opening time: "9:00 AM CST"
+4. If before 9 AM CST: "Opens at 9:00 AM" (locked)
+5. If after 9 AM CST: 
+   - View Day 1 questions
+   - Answer all 4 questions
+   - Submit
+   - See "Day 1 Complete! 1 day streak 🔥"
+6. Next day: Day 2 opens automatically
+
+#### Scenario 9: Streak & Progress Tracking ✅
+1. Student 3 (James) → "Daily Streak Program"
+2. Complete Days 1-3 on time
+3. Miss Day 4 (streak broken)
+4. Resume Days 5-7
+5. See stats:
+   - Total questions answered: 28/40
+   - Days completed on time: 6/10
+   - Current streak: 3 days
+   - Longest streak: 3 days
+
+#### Scenario 10: Class Message System ✅
+1. Teacher → Class → "Messages" → Create
+2. Type: "Announcement"
+3. Heading: "Welcome to Energy Challenge!"
+4. Content: "Let's explore how energy powers our world..."
+5. Publish
+6. Students see message on class page
+
+#### Scenario 11: Feedback System Verification ✅
+1. Teacher creates challenge with feedback enabled
+2. Student solves and submits feedback
+3. Verify: Feedback button only appears for student
+4. Teacher can toggle feedback on/off per challenge
+5. When off: Student doesn't see feedback button
+
+#### Scenario 12: Class Progress Dashboard ✅
+1. Teacher → Class → "Class Progress"
+2. Verify displays:
+   - Total Students: 3
+   - Multiple-choice accuracy: X%
+   - Short answers to review: Y
+   - **Students needing help: [Names sorted]** ✅ NEW
+3. See grid with student names (rows) × challenges (columns)
+4. Click student → View their submission status
+
+#### Scenario 13: Logout & Account Type Switching ✅
+1. Sign in as Student 1
+2. Logout
+3. Sign in screen appears
+4. Switch role to "Teacher"
+5. **Verify**: Form fields are cleared (no student name lingering) ✅ NEW
+6. Sign up as new account
+7. Try switching back to "Student" role
+8. Fields cleared again
+
+#### Scenario 14: Accessibility Features ✅
+1. At login: Toggle Display Mode dropdown
+   - Select "Color-blind friendly" → Red/green colors change
+   - Select "Dyslexia-friendly" → Font and spacing change
+   - Select "Default" → Back to normal
+2. Toggle Read-Aloud → Hears all button names and status updates
+3. Navigate entire site with keyboard (Tab key)
+4. No focus traps or keyboard issues
+
+#### Scenario 15: Profile & Settings ✅
+1. Student 1 → Click profile avatar (top right)
+2. See display name: "Alex Chen"
+3. View optional profile photo section
+4. Update display name: "Alexander Chen"
+5. Save → Changes persist
+6. See name updated in class roster
+
+---
+
+## Deployment
+
+### Development
+```bash
+npm run dev      # Vite dev server on :5173
+```
+
+### Production Build
+```bash
+npm run build    # Optimized bundle to /dist
+npm run preview  # Test prod build locally
+```
+
+### Hosting Options
+
+#### Vercel (Recommended)
+```bash
+# Deploy directly from GitHub
+vercel --prod
+```
+
+#### Netlify
+```bash
+# Connect GitHub repo → auto-deploy on push
+netlify deploy --prod --dir=dist
+```
+
+#### Self-Hosted
+```bash
+# Build and serve dist/ folder
+npm run build
+# Use any static hosting (nginx, Apache, etc.)
+```
+
+### Environment Variables
+```
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+---
+
+## Support & Coordination
+
+### For Implementation & Backend
+**Contact**: Asima (Supabase/Database)
+- Database schema questions
+- RLS policy updates
+- Real-time subscription needs
+
+### For Database Schema Updates
+**Contact**: Kinjal (Database Administrator)
+- New field additions
+- Migration scripts
+- Performance optimization
+
+### For QA & Testing
+**Current Status**: 7/8 items complete (87.5%)
+- **Pending**: Item 8 - Database & README coordination
+- Testing: All features verified on dev-arun branch
+- Build status: ✅ Successful (zero errors)
+
+---
+
+## Repository Information
+
+- **Main Repository**: [APS-Data-Technologies/STEM-challenge-hub](https://github.com/APS-Data-Technologies/STEM-challenge-hub)
+- **Current Branch**: `dev-arun`
+- **Latest Release**: Build #7 (Items 1-7 implemented)
+- **Status**: Ready for QA Testing & Deployment
+
+---
+
+## Feature Completion Checklist
+
+- [x] Item 1: Auto-populated Subject & Grade Band
+- [x] Item 2: Time Zone Handling (CST, EST, MST, PST)
+- [x] Item 3: Student Section Names ("Get Ready for the Challenge", "Daily Streak Program")
+- [x] Item 4: Display Student Names (instead of count)
+- [x] Item 5: Login Form Field Clearing (prevents ID leakage)
+- [x] Item 6: Message Types Update (removed "Rules")
+- [x] Item 7: Student Feedback System (teacher-controlled)
+- [ ] Item 8: Database & README Coordination (Pending Kinjal/Asima)
+
+---
+
+## Questions & Support
+
+For issues, questions, or feature requests, please coordinate with:
+- **Frontend**: Implementation and UI
+- **Backend**: Asima (Supabase setup)
+- **Database**: Kinjal (Schema updates)
+- **QA**: Testing and validation
+
+---
+
+**Last Updated**: November 23, 2026 | **Version**: 1.0 | **Status**: 🟢 Ready for Testing
 
 The current frontend implements the v1 teacher and student flows: role-aware sign-up/sign-in and email password recovery, a teacher grade-band entry screen for K–5, 6–8, and 9–12 classrooms, class creation and joining, class management, challenge drafts and publishing, immediate database-checked feedback for multiple-choice submissions, teacher review of short answers, teacher progress summaries, and profile display-name updates. If a teacher creates a grade/subject combination they already have, the class form offers an available Section A, B, or C so each class can have its own join code. The sign-in screen and signed-in workspace use the Figma visual draft as a reference; the sign-in screen has interactive STEM cards that change illustrations or math problems, a color-changing chemistry flask, a horizontally rotating biology cell, and a robot giggle interaction. The workspace includes role-based side navigation, a class greeting banner, challenge cards with submission progress, and a student discoveries summary. It uses the Supabase policies and RPCs in `/supabase`; the app does not grant access based on a client-selected role.
 
