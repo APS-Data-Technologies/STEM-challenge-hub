@@ -1712,9 +1712,6 @@ select:focus {
   }
 
   .manage-class-button {
-    min-height: 2.25rem;
-    padding: 0.45rem 0.6rem;
-    font-size: 0.67rem;
   }
 
   .join-code span {
@@ -3457,8 +3454,6 @@ body {
 }
 
 .workspace-page-heading .manage-class-button {
-  min-height: 2.2rem;
-  font-size: 0.68rem;
 }
 
 .workspace-page-heading .create-challenge-button {
