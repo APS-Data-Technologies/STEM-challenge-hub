@@ -582,6 +582,17 @@ function ProgramForm({ program, busy, onSave, onCancel, classRecord }: {
   const [hardCount, setHardCount] = useState(String(program?.hard_count ?? 0))
   const total = Number(easyCount) + Number(mediumCount) + Number(hardCount)
   
+  // Extract grade level from class name (e.g., "Kindergarten Science" → "Kindergarten")
+  const getGradeFromClassName = (): string => {
+    if (!classRecord?.name) return 'Grade'
+    // Extract the grade part before the subject
+    const parts = classRecord.name.split(' ')
+    if (parts.length > 1) {
+      return parts.slice(0, -1).join(' ') // Everything except the last word (subject)
+    }
+    return classRecord.name
+  }
+  
   // Auto-populate subject and grade band from class
   const defaultSubject = program?.subject ?? 'Science'
   const defaultGradeBand = program?.grade_band ?? classRecord?.grade_band ?? 'K-2'
@@ -608,8 +619,8 @@ function ProgramForm({ program, busy, onSave, onCancel, classRecord }: {
       <h3>{program ? 'Edit daily plan' : 'Create a daily plan'}</h3>
       <label className="field-label">Title<input name="title" defaultValue={program?.title} maxLength={100} required /></label>
       <div className="form-grid">
-        <label className="field-label">Subject<select name="subject" defaultValue={defaultSubject}>{['Science', 'Technology', 'Engineering', 'Math'].map((subject) => <option key={subject}>{subject}</option>)}</select><span className="field-hint">Auto-selected from class subject</span></label>
-        <label className="field-label">Grade band<select name="gradeBand" defaultValue={getDefaultGradeBand()}>{['K-2', '3-5', '6-8', '9-12'].map((band) => <option key={band}>{band}</option>)}</select><span className="field-hint">Based on class grade level</span></label>
+        <label className="field-label">Subject<input type="text" value="Science" disabled /><input type="hidden" name="subject" value="Science" /></label>
+        <label className="field-label">Grade<input type="text" value={getGradeFromClassName()} disabled /><input type="hidden" name="gradeBand" value={getDefaultGradeBand()} /></label>
         <label className="field-label">Number of days<input name="days" type="number" min={1} max={100} defaultValue={program?.days ?? 1} required /></label>
         <label className="field-label">Start date<input name="startDate" type="date" defaultValue={program?.start_date} required /></label>
         <label className="field-label">Daily opening time<input name="startTime" type="time" defaultValue={program?.start_time.slice(0, 5) ?? '09:00'} required /></label>

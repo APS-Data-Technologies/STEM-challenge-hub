@@ -30,6 +30,17 @@ export function ChallengeForm({
   onSaved: () => void
   supabase: SupabaseClient
 }) {
+  // Helper to extract grade level from class name (e.g., "Kindergarten Science" → "Kindergarten")
+  const getGradeFromClassName = (): string => {
+    if (!classRecord?.name) return 'Grade'
+    // Extract the grade part before the subject
+    const parts = classRecord.name.split(' ')
+    if (parts.length > 1) {
+      return parts.slice(0, -1).join(' ') // Everything except the last word (subject)
+    }
+    return classRecord.name
+  }
+
   // Helper to map class grade band to challenge grade band
   const getDefaultGradeBand = (): GradeBand => {
     if (challenge?.grade_band) return challenge.grade_band
@@ -287,28 +298,23 @@ export function ChallengeForm({
           <div className="form-grid">
             <label className="field-label">
               Subject
-              <select defaultValue={challenge?.subject ?? subjects[0]} name="subject">
-                {subjects.map((subject) => (
-                  <option key={subject} value={subject}>
-                    {subject}
-                  </option>
-                ))}
-              </select>
-              <span className="field-hint">Auto-selected from class subject</span>
+              <input
+                type="text"
+                value="Science"
+                disabled
+                name="subject"
+              />
+              <input type="hidden" name="subject" value="Science" />
             </label>
             <label className="field-label">
-              Grade band
-              <select
-                defaultValue={getDefaultGradeBand()}
-                name="gradeBand"
-              >
-                {gradeBands.map((gradeBand) => (
-                  <option key={gradeBand} value={gradeBand}>
-                    {gradeBand}
-                  </option>
-                ))}
-              </select>
-              <span className="field-hint">Based on class grade level</span>
+              Grade
+              <input
+                type="text"
+                value={getGradeFromClassName()}
+                disabled
+                name="grade"
+              />
+              <input type="hidden" name="gradeBand" value={getDefaultGradeBand()} />
             </label>
           </div>
           <fieldset className="answer-type-fieldset">
