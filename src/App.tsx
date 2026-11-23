@@ -3439,10 +3439,10 @@ function EmptyChallenges() {
 
 function SubjectMark({ subject }: { subject: Challenge['subject'] }) {
   const icon = {
-    Science: '⚗',
-    Technology: '⌘',
-    Engineering: '△',
-    Math: '∑',
+    Science: '🔬',
+    Technology: '💻',
+    Engineering: '🔧',
+    Math: '🧮',
   }[subject]
   return (
     <span className={`subject-mark subject-${subject.toLowerCase()}`} aria-label={subject}>
