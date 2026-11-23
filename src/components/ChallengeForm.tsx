@@ -82,6 +82,9 @@ export function ChallengeForm({
             .filter(Boolean)
         : null
     const correctChoice = keyAnswer.trim()
+    const hintLevel1 = String(formData.get('hintLevel1') ?? '').trim() || null
+    const hintLevel2 = String(formData.get('hintLevel2') ?? '').trim() || null
+    const hintLevel3 = String(formData.get('hintLevel3') ?? '').trim() || null
     const hasDuplicateChoices =
       choices !== null &&
       new Set(choices.map((choice) => choice.toLocaleLowerCase())).size !==
@@ -102,7 +105,7 @@ export function ChallengeForm({
       return
     }
 
-    const challengeData = {
+    const challengeData: any = {
       class_id: classId,
       title,
       prompt,
@@ -113,6 +116,12 @@ export function ChallengeForm({
       is_published: false,
       program_day: challenge?.program_day ?? null,
       level: challenge?.level ?? null,
+    }
+
+    if (answerType === 'multiple_choice' && (hintLevel1 || hintLevel2 || hintLevel3)) {
+      challengeData.hint_level_1 = hintLevel1
+      challengeData.hint_level_2 = hintLevel2
+      challengeData.hint_level_3 = hintLevel3
     }
 
     let savedDraft = false
@@ -356,6 +365,43 @@ export function ChallengeForm({
                   students.
                 </span>
               </label>
+              <div className="hints-section">
+                <p className="hints-title"><strong>Progressive Hints (Optional)</strong></p>
+                <p className="hints-info">Students see these hints after each wrong answer. Leave blank for auto-generated hints.</p>
+                <label className="field-label">
+                  Hint 1 (after 1st wrong answer)
+                  <textarea
+                    defaultValue={challenge?.hint_level_1 ?? ''}
+                    maxLength={200}
+                    name="hintLevel1"
+                    placeholder="e.g. Think about how many sides this shape has..."
+                    rows={2}
+                  />
+                  <span className="field-hint">General guidance to point them in the right direction.</span>
+                </label>
+                <label className="field-label">
+                  Hint 2 (after 2nd wrong answer)
+                  <textarea
+                    defaultValue={challenge?.hint_level_2 ?? ''}
+                    maxLength={200}
+                    name="hintLevel2"
+                    placeholder="e.g. This shape has 4 equal sides and 4 right angles..."
+                    rows={2}
+                  />
+                  <span className="field-hint">More specific guidance.</span>
+                </label>
+                <label className="field-label">
+                  Hint 3 (after 3rd wrong answer)
+                  <textarea
+                    defaultValue={challenge?.hint_level_3 ?? ''}
+                    maxLength={200}
+                    name="hintLevel3"
+                    placeholder="e.g. The answer is a square, which is a type of rectangle..."
+                    rows={2}
+                  />
+                  <span className="field-hint">Nearly gives away the answer.</span>
+                </label>
+              </div>
             </>
           ) : null}
           <label className="publish-toggle">

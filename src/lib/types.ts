@@ -46,6 +46,9 @@ export interface Challenge {
   is_published: boolean
   program_day: number | null
   level: DailyLevel | null
+  hint_level_1?: string | null
+  hint_level_2?: string | null
+  hint_level_3?: string | null
   created_at: string
 }
 

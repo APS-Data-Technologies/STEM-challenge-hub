@@ -1121,6 +1121,36 @@ select:focus {
   min-height: unset;
 }
 
+.hints-section {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: #f5f7f6;
+  border-left: 4px solid #d4a574;
+  border-radius: 4px;
+}
+
+.hints-title {
+  margin: 0 0 0.5rem 0;
+  color: #3f5044;
+  font-size: 0.88rem;
+}
+
+.hints-info {
+  margin: 0 0 1rem 0;
+  color: #666;
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.hints-section .field-label {
+  margin-bottom: 1rem;
+}
+
+.hints-section textarea {
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
 .publish-toggle {
   display: flex;
   align-items: flex-start;

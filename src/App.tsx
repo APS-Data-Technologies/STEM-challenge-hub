@@ -347,6 +347,7 @@ function App() {
   const [answerFeedback, setAnswerFeedback] = useState<
     Record<string, AnswerFeedback>
   >({})
+  const [wrongAttempts, setWrongAttempts] = useState<Record<string, number>>({})
 
   useEffect(() => {
     document.documentElement.dataset.displayMode = displayMode
@@ -1015,17 +1016,50 @@ function App() {
             kind: isCorrect ? 'success' : 'retry',
             message: isCorrect
               ? 'Correct! Your curiosity paid off.'
-              : 'Good try. Revisit the clues and give it another go.',
+              : getProgressiveHint(challenge, wrongAttempts[challenge.id] ?? 0),
           }
         : {
             kind: 'success',
             message: 'Nice work sharing your thinking. Your teacher will review it.',
           }
+    
+    // Track wrong attempts for progressive hints
+    if (!isCorrect && challenge.answer_type === 'multiple_choice') {
+      const newAttempts = (wrongAttempts[challenge.id] ?? 0) + 1
+      setWrongAttempts((current) => ({
+        ...current,
+        [challenge.id]: newAttempts,
+      }))
+    }
+    
     setAnswerFeedback((current) => ({
       ...current,
       [challenge.id]: feedback,
     }))
     setRefreshKey((key) => key + 1)
+  }
+
+  function getProgressiveHint(challenge: Challenge, attemptCount: number): string {
+    // Show progressive hints based on number of wrong attempts
+    if (attemptCount === 0) {
+      // First wrong attempt - general encouragement with basic hint
+      if (challenge.hint_level_1) {
+        return `Good try! Here's a hint: ${challenge.hint_level_1}`
+      }
+      return 'Good try. Think about the question again and look for clues.'
+    } else if (attemptCount === 1) {
+      // Second wrong attempt - more specific hint
+      if (challenge.hint_level_2) {
+        return `Getting closer! Here's another hint: ${challenge.hint_level_2}`
+      }
+      return 'Keep thinking! Look at all the choices carefully.'
+    } else {
+      // Third attempt and beyond - nearly gives it away
+      if (challenge.hint_level_3) {
+        return `One more try! Final hint: ${challenge.hint_level_3}`
+      }
+      return 'You\'ve got this! Look for the most logical answer.'
+    }
   }
 
   async function evaluateSubmission(
