@@ -1401,7 +1401,7 @@ function App() {
                 onClick={() => isTeacher ? setTeacherView('challenges') : setStudentDailyView(false)}
               >
                 <span aria-hidden="true">{isTeacher ? '⚗' : '✳'}</span>
-                {isTeacher ? 'Individual Challenges' : 'My challenges'}
+                {isTeacher ? `Individual Challenges${selectedClass ? ` - ${selectedClass.name}` : ''}` : 'My challenges'}
               </button>
               {isTeacher ? (
               <>
@@ -1411,7 +1411,7 @@ function App() {
                   onClick={() => setTeacherView('progress')}
                 >
                   <span aria-hidden="true">▤</span>
-                  Class progress
+                  {`Class progress${selectedClass ? ` - ${selectedClass.name}` : ''}`}
                 </button>
               </>
               ) : null}
@@ -1422,7 +1422,7 @@ function App() {
                 type="button"
               >
                 <span aria-hidden="true">◷</span>
-                Daily programs
+                {`Daily programs${selectedClass ? ` - ${selectedClass.name}` : ''}`}
               </button>
             </nav>
           ) : !teacherGradeBand ? (
@@ -1575,26 +1575,13 @@ function App() {
                       ? selectedClass.name
                       : 'YOUR CLASS'}
                   </p>
-                  <h1>
-                    {isTeacher
-                      ? teacherView === 'challenges'
-                        ? 'Individual Challenges'
-                        : teacherView === 'progress'
-                          ? 'Class progress'
-                          : 'Daily programs'
-                      : selectedClass.name}
-                  </h1>
-                  <p className="page-subtitle">
-                    {isTeacher
-                      ? teacherView === 'challenges'
-                        ? 'Create and manage challenges for this class.'
-                        : teacherView === 'progress'
-                          ? 'Review student answers and track class progress.'
-                          : 'Create and manage scheduled daily programs.'
-                      : studentDailyView
-                        ? 'Complete your scheduled daily questions.'
-                        : 'Choose a challenge and submit your answer.'}
-                  </p>
+                  {!isTeacher ? (
+                    <h1>
+                      {teacherView === 'progress'
+                        ? 'Class progress'
+                        : 'Daily programs'}
+                    </h1>
+                  ) : null}
                 </div>
                 <div className="class-heading-actions">
                   {isTeacher ? (
