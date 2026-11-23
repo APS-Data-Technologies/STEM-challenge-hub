@@ -1828,6 +1828,7 @@ function App() {
           classRecord={selectedClass}
           dashboard={dashboard}
           preselectedChallengeId={selectedFeedbackChallengeId}
+          supabase={supabase!}
           onCancel={() => {
             setShowChallengeFeedback(false)
             setSelectedFeedbackChallengeId(null)
@@ -2731,12 +2732,14 @@ function ChallengeFeedback({
   classRecord,
   dashboard,
   preselectedChallengeId,
+  supabase,
   onCancel,
 }: {
   challenges: Challenge[]
   classRecord: ClassRecord
   dashboard: Dashboard | null
   preselectedChallengeId?: string | null
+  supabase: SupabaseClient
   onCancel: () => void
 }) {
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(preselectedChallengeId ?? null)
@@ -2753,22 +2756,18 @@ function ChallengeFeedback({
     event.preventDefault()
     setError('')
     try {
-      // Save feedback to database via Supabase
-      const response = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Save feedback to Supabase
+      const { error: submitError } = await supabase
+        .from('challenge_feedback')
+        .upsert({
           challenge_id: selectedChallengeId,
           difficulty,
           clarity,
           enjoyment,
           comment: feedbackText || null,
-        }),
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to submit feedback')
-      }
+        })
+
+      if (submitError) throw submitError
 
       setSubmitted(true)
       setTimeout(() => {
