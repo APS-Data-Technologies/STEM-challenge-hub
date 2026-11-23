@@ -2909,7 +2909,7 @@ function TeacherBandChooser({
                       <span className="teacher-band-range-label">{band.id}</span>
                       <span className="teacher-band-name">
                         {band.id === 'K-5'
-                          ? 'Grade K-5 (Explorers)'
+                          ? 'Explorers'
                           : band.id === '6-8'
                             ? 'Builders'
                             : 'Innovators'}
