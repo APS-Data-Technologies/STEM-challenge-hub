@@ -2909,7 +2909,7 @@ function TeacherBandChooser({
                       <span className="teacher-band-range-label">{band.id}</span>
                       <span className="teacher-band-name">
                         {band.id === 'K-5'
-                          ? 'Discovery'
+                          ? 'Grade K-5 (Explorers)'
                           : band.id === '6-8'
                             ? 'Builders'
                             : 'Innovators'}
@@ -3113,10 +3113,10 @@ function TeacherClassOverview({
               }}
               value={selectedSubject}
             >
-              <option>Math</option>
               <option>Science</option>
               <option>Technology</option>
               <option>Engineering</option>
+              <option>Math</option>
             </select>
           </label>
           <p className="teacher-create-class-preview">

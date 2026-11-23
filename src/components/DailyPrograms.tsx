@@ -583,7 +583,7 @@ function ProgramForm({ program, busy, onSave, onCancel }: {
       <h3>{program ? 'Edit daily plan' : 'Create a daily plan'}</h3>
       <label className="field-label">Title<input name="title" defaultValue={program?.title} maxLength={100} required /></label>
       <div className="form-grid">
-        <label className="field-label">Subject<select name="subject" defaultValue={program?.subject ?? 'Math'}>{['Math', 'Science', 'Technology', 'Engineering'].map((subject) => <option key={subject}>{subject}</option>)}</select></label>
+        <label className="field-label">Subject<select name="subject" defaultValue={program?.subject ?? 'Science'}>{['Science', 'Technology', 'Engineering', 'Math'].map((subject) => <option key={subject}>{subject}</option>)}</select></label>
         <label className="field-label">Grade band<select name="gradeBand" defaultValue={program?.grade_band ?? 'K-2'}>{['K-2', '3-5', '6-8', '9-12'].map((band) => <option key={band}>{band}</option>)}</select></label>
         <label className="field-label">Number of days<input name="days" type="number" min={1} max={100} defaultValue={program?.days ?? 1} required /></label>
         <label className="field-label">Start date<input name="startDate" type="date" defaultValue={program?.start_date} required /></label>
