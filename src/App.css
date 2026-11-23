@@ -1518,6 +1518,122 @@ select:focus {
   background: #873e36;
 }
 
+.feedback-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.feedback-modal {
+  width: min(100%, 42rem);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.feedback-content {
+  padding: 1.2rem;
+  display: grid;
+  gap: 1.2rem;
+}
+
+.feedback-challenge-details {
+  display: grid;
+  gap: 1rem;
+}
+
+.feedback-challenge-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.feedback-challenge-header h3 {
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+}
+
+.feedback-challenge-header .eyebrow {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.student-submissions-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.student-submissions-list h4 {
+  margin: 0 0 0.6rem;
+  color: var(--ink);
+  font-size: 0.87rem;
+}
+
+.student-submissions-list ul {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.student-submissions-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: #fafbfc;
+}
+
+.submission-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.submission-info strong {
+  display: block;
+  color: var(--ink);
+  margin-bottom: 0.3rem;
+}
+
+.submission-answer {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.submission-status {
+  margin: 0.3rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.submission-status.correct {
+  color: #2d7a4a;
+}
+
+.submission-status.incorrect {
+  color: #a34f45;
+}
+
+.no-submissions {
+  padding: 1rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.87rem;
+  background: #fafbfc;
+  border-radius: 0.6rem;
+}
+
 .answer-viewer {
   width: min(100%, 34rem);
 }

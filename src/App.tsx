@@ -347,6 +347,7 @@ function App() {
     Record<string, AnswerFeedback>
   >({})
   const [wrongAttempts, setWrongAttempts] = useState<Record<string, number>>({})
+  const [showChallengeFeedback, setShowChallengeFeedback] = useState(false)
 
   useEffect(() => {
     document.documentElement.dataset.displayMode = displayMode
@@ -1602,6 +1603,14 @@ function App() {
                       >
                         Manage class
                       </button>
+                      {isTeacher && teacherView === 'challenges' ? (
+                        <button
+                          className="button button-secondary feedback-button"
+                          onClick={() => setShowChallengeFeedback(true)}
+                        >
+                          <span aria-hidden="true">💬</span> Feedback
+                        </button>
+                      ) : null}
                     </>
                   ) : null}
                   <button
@@ -1818,6 +1827,14 @@ function App() {
           onDeleteClass={deleteClass}
           onRemoveStudent={removeStudent}
           onRenameClass={renameClass}
+        />
+      ) : null}
+      {showChallengeFeedback && selectedClass && dashboard && isTeacher ? (
+        <ChallengeFeedback
+          challenges={dashboard.challenges.filter((c) => c.is_published)}
+          classRecord={selectedClass}
+          dashboard={dashboard}
+          onCancel={() => setShowChallengeFeedback(false)}
         />
       ) : null}
       {showProfile ? (
@@ -2692,6 +2709,132 @@ function ClassManagement({
           >
             Delete class
           </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function ChallengeFeedback({
+  challenges,
+  classRecord,
+  dashboard,
+  onCancel,
+}: {
+  challenges: Challenge[]
+  classRecord: ClassRecord
+  dashboard: Dashboard | null
+  onCancel: () => void
+}) {
+  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null)
+
+  const selectedChallenge = challenges.find((c) => c.id === selectedChallengeId)
+  const studentsWithSubmissions = selectedChallenge && dashboard
+    ? dashboard.members.filter((member) =>
+        dashboard.submissions.some(
+          (sub) => sub.challenge_id === selectedChallenge.id && sub.student_id === member.id,
+        ),
+      )
+    : []
+
+  return (
+    <div className="modal-backdrop" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onCancel()
+    }}>
+      <section
+        aria-labelledby="feedback-title"
+        aria-modal="true"
+        className="modal-card feedback-modal"
+        role="dialog"
+      >
+        <header className="modal-header">
+          <div>
+            <p className="eyebrow">PROVIDE FEEDBACK</p>
+            <h2 id="feedback-title">Challenge feedback</h2>
+          </div>
+          <button
+            aria-label="Close dialog"
+            className="icon-button"
+            onClick={onCancel}
+            type="button"
+          >
+            ×
+          </button>
+        </header>
+        <div className="feedback-content">
+          {!selectedChallenge ? (
+            <div>
+              <label className="field-label">
+                <span>Select a challenge</span>
+                <select
+                  onChange={(event) => setSelectedChallengeId(event.target.value || null)}
+                  value={selectedChallengeId || ''}
+                >
+                  <option value="">Choose a challenge...</option>
+                  {challenges.map((challenge) => (
+                    <option key={challenge.id} value={challenge.id}>
+                      {challenge.prompt}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : (
+            <div className="feedback-challenge-details">
+              <div className="feedback-challenge-header">
+                <div>
+                  <h3>{selectedChallenge.prompt}</h3>
+                  <p className="eyebrow">Type: {selectedChallenge.answer_type}</p>
+                </div>
+                <button
+                  className="text-button"
+                  onClick={() => setSelectedChallengeId(null)}
+                  type="button"
+                >
+                  ← Change challenge
+                </button>
+              </div>
+              {studentsWithSubmissions.length > 0 ? (
+                <div className="student-submissions-list">
+                  <h4>Students with submissions ({studentsWithSubmissions.length})</h4>
+                  <ul>
+                    {studentsWithSubmissions.map((student) => {
+                      const submission = dashboard!.submissions.find(
+                        (sub) =>
+                          sub.challenge_id === selectedChallenge.id &&
+                          sub.student_id === student.id,
+                      )
+                      return (
+                        <li key={student.id}>
+                          <div className="submission-info">
+                            <strong>{student.display_name}</strong>
+                            <p className="submission-answer">
+                              {submission?.answer ? `Answer: ${submission.answer}` : 'No answer'}
+                            </p>
+                            {submission?.is_correct !== null && (
+                              <p className={`submission-status ${submission?.is_correct ? 'correct' : 'incorrect'}`}>
+                                {submission?.is_correct ? '✓ Correct' : '✗ Incorrect'}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            className="button button-secondary"
+                            type="button"
+                          >
+                            Give feedback
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              ) : (
+                <p className="no-submissions">
+                  No students have submitted answers for this challenge yet.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </section>
     </div>
