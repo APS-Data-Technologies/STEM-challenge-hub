@@ -64,6 +64,7 @@ function message(error: unknown) {
 export function DailyPrograms({
   supabase,
   classId,
+  classRecord,
   userId,
   isTeacher,
   members,
@@ -73,6 +74,7 @@ export function DailyPrograms({
 }: {
   supabase: SupabaseClient
   classId: string
+  classRecord?: { grade_band: string | null; name: string }
   userId: string
   isTeacher: boolean
   members: Profile[]
@@ -419,7 +421,7 @@ export function DailyPrograms({
         ) : null}
       </div>
       {showProgramForm && isTeacher ? (
-        <ProgramForm key={editingProgram?.id ?? 'new'} program={editingProgram} busy={busy} onSave={saveProgram} onCancel={() => {
+        <ProgramForm key={editingProgram?.id ?? 'new'} program={editingProgram} busy={busy} classRecord={classRecord} onSave={saveProgram} onCancel={() => {
           setShowProgramForm(false)
           setEditingProgram(null)
           setError('')
@@ -567,28 +569,51 @@ export function DailyPrograms({
   )
 }
 
-function ProgramForm({ program, busy, onSave, onCancel }: {
+function ProgramForm({ program, busy, onSave, onCancel, classRecord }: {
   program: DailyProgram | null
   busy: boolean
   onSave: (event: FormEvent<HTMLFormElement>) => void
   onCancel: () => void
+  classRecord?: { grade_band: string | null; name: string }
 }) {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
   const [easyCount, setEasyCount] = useState(String(program?.easy_count ?? 1))
   const [mediumCount, setMediumCount] = useState(String(program?.medium_count ?? 0))
   const [hardCount, setHardCount] = useState(String(program?.hard_count ?? 0))
   const total = Number(easyCount) + Number(mediumCount) + Number(hardCount)
+  
+  // Auto-populate subject and grade band from class
+  const defaultSubject = program?.subject ?? 'Science'
+  const defaultGradeBand = program?.grade_band ?? classRecord?.grade_band ?? 'K-2'
+  
+  // Map class grade band to daily program grade band
+  const getDefaultGradeBand = () => {
+    if (program?.grade_band) return program.grade_band
+    const classGrade = classRecord?.grade_band
+    if (classGrade === 'K-5') return 'K-2'
+    if (classGrade === '6-8') return '6-8'
+    if (classGrade === '9-12') return '9-12'
+    return 'K-2'
+  }
+  
+  const timezones = [
+    { value: 'America/Chicago', label: 'CST (Central)' },
+    { value: 'America/New_York', label: 'EST (Eastern)' },
+    { value: 'America/Denver', label: 'MST (Mountain)' },
+    { value: 'America/Los_Angeles', label: 'PST (Pacific)' },
+  ]
+  
   return (
     <form className="daily-editor" onSubmit={(event) => void onSave(event)}>
       <h3>{program ? 'Edit daily plan' : 'Create a daily plan'}</h3>
       <label className="field-label">Title<input name="title" defaultValue={program?.title} maxLength={100} required /></label>
       <div className="form-grid">
-        <label className="field-label">Subject<select name="subject" defaultValue={program?.subject ?? 'Science'}>{['Science', 'Technology', 'Engineering', 'Math'].map((subject) => <option key={subject}>{subject}</option>)}</select></label>
-        <label className="field-label">Grade band<select name="gradeBand" defaultValue={program?.grade_band ?? 'K-2'}>{['K-2', '3-5', '6-8', '9-12'].map((band) => <option key={band}>{band}</option>)}</select></label>
+        <label className="field-label">Subject<select name="subject" defaultValue={defaultSubject}>{['Science', 'Technology', 'Engineering', 'Math'].map((subject) => <option key={subject}>{subject}</option>)}</select><span className="field-hint">Auto-selected from class subject</span></label>
+        <label className="field-label">Grade band<select name="gradeBand" defaultValue={getDefaultGradeBand()}>{['K-2', '3-5', '6-8', '9-12'].map((band) => <option key={band}>{band}</option>)}</select><span className="field-hint">Based on class grade level</span></label>
         <label className="field-label">Number of days<input name="days" type="number" min={1} max={100} defaultValue={program?.days ?? 1} required /></label>
         <label className="field-label">Start date<input name="startDate" type="date" defaultValue={program?.start_date} required /></label>
         <label className="field-label">Daily opening time<input name="startTime" type="time" defaultValue={program?.start_time.slice(0, 5) ?? '09:00'} required /></label>
-        <label className="field-label">Time zone<input name="timeZone" defaultValue={program?.time_zone ?? timeZone} required /><span className="field-hint">Use a time zone such as America/Chicago.</span></label>
+        <label className="field-label">Time zone<select name="timeZone" defaultValue={program?.time_zone ?? timeZone}>{timezones.map((tz) => <option key={tz.value} value={tz.value}>{tz.label}</option>)}</select><span className="field-hint">CST, EST, MST, or PST</span></label>
         <label className="field-label">Easy questions<input name="easy" type="number" min={0} value={easyCount} onChange={(event) => setEasyCount(event.target.value)} required /></label>
         <label className="field-label">Medium questions<input name="medium" type="number" min={0} value={mediumCount} onChange={(event) => setMediumCount(event.target.value)} required /></label>
         <label className="field-label">Hard questions<input name="hard" type="number" min={0} value={hardCount} onChange={(event) => setHardCount(event.target.value)} required /></label>

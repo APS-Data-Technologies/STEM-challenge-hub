@@ -18,16 +18,28 @@ const gradeBands: GradeBand[] = ['K-2', '3-5', '6-8', '9-12']
 export function ChallengeForm({
   challenge,
   classId,
+  classRecord,
   onCancel,
   onSaved,
   supabase,
 }: {
   challenge: Challenge | null
   classId: string
+  classRecord?: { grade_band: string | null; name: string }
   onCancel: () => void
   onSaved: () => void
   supabase: SupabaseClient
 }) {
+  // Helper to map class grade band to challenge grade band
+  const getDefaultGradeBand = (): GradeBand => {
+    if (challenge?.grade_band) return challenge.grade_band
+    const classGrade = classRecord?.grade_band
+    if (classGrade === 'K-5') return 'K-2'
+    if (classGrade === '6-8') return '6-8'
+    if (classGrade === '9-12') return '9-12'
+    return gradeBands[2]
+  }
+
   const [answerType, setAnswerType] = useState<AnswerType>(
     challenge?.answer_type ?? 'multiple_choice',
   )
@@ -282,11 +294,12 @@ export function ChallengeForm({
                   </option>
                 ))}
               </select>
+              <span className="field-hint">Auto-selected from class subject</span>
             </label>
             <label className="field-label">
               Grade band
               <select
-                defaultValue={challenge?.grade_band ?? gradeBands[2]}
+                defaultValue={getDefaultGradeBand()}
                 name="gradeBand"
               >
                 {gradeBands.map((gradeBand) => (
@@ -295,6 +308,7 @@ export function ChallengeForm({
                   </option>
                 ))}
               </select>
+              <span className="field-hint">Based on class grade level</span>
             </label>
           </div>
           <fieldset className="answer-type-fieldset">

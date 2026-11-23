@@ -1733,6 +1733,7 @@ function App() {
                   key={selectedClass.id}
                   supabase={supabase!}
                   classId={selectedClass.id}
+                  classRecord={selectedClass}
                   userId={user.id}
                   isTeacher={isTeacher}
                   members={currentDashboard.members}
@@ -1810,6 +1811,7 @@ function App() {
         <ChallengeForm
           challenge={editingChallenge}
           classId={selectedClass.id}
+          classRecord={selectedClass}
           onCancel={() => {
             setShowChallengeForm(false)
             setRefreshKey((key) => key + 1)
