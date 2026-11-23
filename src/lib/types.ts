@@ -31,7 +31,6 @@ export type ClassGradeBand = 'K-5' | '6-8' | '9-12'
 export type ClassMessageType =
   | 'Announcement'
   | 'Description'
-  | 'Rules'
   | 'Guidelines'
 
 export interface Challenge {

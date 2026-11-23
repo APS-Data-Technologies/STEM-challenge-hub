@@ -32,7 +32,6 @@ const classOrderStoragePrefix = 'stem-challenge-hub-class-order:'
 const classMessageTypes: ClassMessageType[] = [
   'Announcement',
   'Description',
-  'Rules',
   'Guidelines',
 ]
 function isClassMessageType(value: string): value is ClassMessageType {
@@ -3377,7 +3376,7 @@ function ClassMessageEditor({
         <textarea
           maxLength={2000}
           onChange={(event) => setContent(event.target.value)}
-          placeholder="Write an announcement, class description, rules, or guidelines..."
+          placeholder="Write an announcement, class description, or guidelines..."
           required
           rows={4}
           value={content}
