@@ -576,7 +576,39 @@ function ProgramForm({ program, busy, onSave, onCancel, classRecord }: {
   onCancel: () => void
   classRecord?: { grade_band: string | null; name: string }
 }) {
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  const timezones = [
+    { value: 'America/Chicago', label: 'CST (Central)' },
+    { value: 'America/New_York', label: 'EST (Eastern)' },
+    { value: 'America/Denver', label: 'MST (Mountain)' },
+    { value: 'America/Los_Angeles', label: 'PST (Pacific)' },
+  ]
+  
+  // Get default timezone: use existing program timezone or detect browser timezone
+  const getDefaultTimezone = () => {
+    if (program?.time_zone) return program.time_zone
+    
+    const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    
+    // Check if browser timezone matches one of our options
+    if (timezones.some(tz => tz.value === browserTz)) {
+      return browserTz
+    }
+    
+    // Map common timezone variations to our supported timezones
+    const tzMappings: Record<string, string> = {
+      'UTC': 'America/Chicago',
+      'America/Mexico_City': 'America/Chicago',
+      'America/Argentina/Buenos_Aires': 'America/New_York',
+      'Europe/London': 'America/New_York',
+      'America/Vancouver': 'America/Los_Angeles',
+      'America/Phoenix': 'America/Denver',
+      'America/Anchorage': 'America/Los_Angeles',
+      'Pacific/Honolulu': 'America/Los_Angeles',
+    }
+    
+    return tzMappings[browserTz] || 'America/Chicago'
+  }
+  
   const [easyCount, setEasyCount] = useState(String(program?.easy_count ?? 1))
   const [mediumCount, setMediumCount] = useState(String(program?.medium_count ?? 0))
   const [hardCount, setHardCount] = useState(String(program?.hard_count ?? 0))
@@ -607,13 +639,6 @@ function ProgramForm({ program, busy, onSave, onCancel, classRecord }: {
     return 'K-2'
   }
   
-  const timezones = [
-    { value: 'America/Chicago', label: 'CST (Central)' },
-    { value: 'America/New_York', label: 'EST (Eastern)' },
-    { value: 'America/Denver', label: 'MST (Mountain)' },
-    { value: 'America/Los_Angeles', label: 'PST (Pacific)' },
-  ]
-  
   return (
     <form className="daily-editor" onSubmit={(event) => void onSave(event)}>
       <h3>{program ? 'Edit daily plan' : 'Create a daily plan'}</h3>
@@ -624,7 +649,7 @@ function ProgramForm({ program, busy, onSave, onCancel, classRecord }: {
         <label className="field-label">Number of days<input name="days" type="number" min={1} max={100} defaultValue={program?.days ?? 1} required /></label>
         <label className="field-label">Start date<input name="startDate" type="date" defaultValue={program?.start_date} required /></label>
         <label className="field-label">Daily opening time<input name="startTime" type="time" defaultValue={program?.start_time.slice(0, 5) ?? '09:00'} required /></label>
-        <label className="field-label">Time zone<select name="timeZone" defaultValue={program?.time_zone ?? timeZone}>{timezones.map((tz) => <option key={tz.value} value={tz.value}>{tz.label}</option>)}</select><span className="field-hint">CST, EST, MST, or PST</span></label>
+        <label className="field-label">Time zone<select name="timeZone" defaultValue={getDefaultTimezone()}>{timezones.map((tz) => <option key={tz.value} value={tz.value}>{tz.label}</option>)}</select><span className="field-hint">CST, EST, MST, or PST</span></label>
         <label className="field-label">Easy questions<input name="easy" type="number" min={0} value={easyCount} onChange={(event) => setEasyCount(event.target.value)} required /></label>
         <label className="field-label">Medium questions<input name="medium" type="number" min={0} value={mediumCount} onChange={(event) => setMediumCount(event.target.value)} required /></label>
         <label className="field-label">Hard questions<input name="hard" type="number" min={0} value={hardCount} onChange={(event) => setHardCount(event.target.value)} required /></label>
