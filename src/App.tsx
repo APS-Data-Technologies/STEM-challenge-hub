@@ -2767,15 +2767,14 @@ function ChallengeFeedback({
     setError('')
     try {
       // Save feedback to Supabase
+      // Note: The actual database table has user_id and feedback_text instead of student_id and comment
       const { error: submitError } = await supabase
         .from('challenge_feedback')
         .upsert({
           challenge_id: selectedChallengeId,
-          student_id: userId,
-          difficulty,
-          clarity,
-          enjoyment,
-          comment: feedbackText || null,
+          user_id: userId,
+          feedback_text: feedbackText || null,
+          submitted_at: new Date().toISOString(),
         })
 
       if (submitError) throw submitError
@@ -2791,6 +2790,7 @@ function ChallengeFeedback({
         onCancel()
       }, 2000)
     } catch (err) {
+      console.error('Feedback submission error:', err)
       setError(err instanceof Error ? err.message : 'An error occurred')
     }
   }

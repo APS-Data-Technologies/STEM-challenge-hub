@@ -58,7 +58,7 @@ export function ChallengeForm({
   const [pendingChallengeId, setPendingChallengeId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
-  const [feedbackEnabled, setFeedbackEnabled] = useState(challenge?.feedback_enabled ?? false)
+  const [feedbackEnabled, setFeedbackEnabled] = useState(challenge?.feedback_enabled ?? true)
 
   useEffect(() => {
     if (!challenge || challenge.answer_type !== 'multiple_choice') return
