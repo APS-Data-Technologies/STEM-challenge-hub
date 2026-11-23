@@ -1401,7 +1401,7 @@ function App() {
                 onClick={() => isTeacher ? setTeacherView('challenges') : setStudentDailyView(false)}
               >
                 <span aria-hidden="true">{isTeacher ? '⚗' : '✳'}</span>
-                {isTeacher ? 'Challenges' : 'My challenges'}
+                {isTeacher ? 'Individual Challenges' : 'My challenges'}
               </button>
               {isTeacher ? (
               <>
@@ -1578,7 +1578,7 @@ function App() {
                   <h1>
                     {isTeacher
                       ? teacherView === 'challenges'
-                        ? 'Challenges'
+                        ? 'Individual Challenges'
                         : teacherView === 'progress'
                           ? 'Class progress'
                           : 'Daily programs'
