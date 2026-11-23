@@ -1454,12 +1454,6 @@ function App() {
             <strong>Small challenges. Big discoveries.</strong>
             <p>A little curiosity goes a long way.</p>
           </div>
-          <div className="sidebar-note">
-            <span className="note-icon" aria-hidden="true">
-              i
-            </span>
-            <p>Demo project. Use fictional names and classroom data only.</p>
-          </div>
         </aside>
 
         <section className="main-panel">
