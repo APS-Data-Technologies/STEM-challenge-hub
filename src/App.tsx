@@ -1401,7 +1401,7 @@ function App() {
                 onClick={() => isTeacher ? setTeacherView('challenges') : setStudentDailyView(false)}
               >
                 <span aria-hidden="true">{isTeacher ? '⚗' : '✳'}</span>
-                {isTeacher ? `Individual Challenges${selectedClass ? ` - ${selectedClass.name}` : ''}` : 'My challenges'}
+                {isTeacher ? `Individual Challenges${selectedClass ? ` - ${selectedClass.name}` : ''}` : 'Get Ready for the Challenge.'}
               </button>
               {isTeacher ? (
               <>
@@ -1422,7 +1422,7 @@ function App() {
                 type="button"
               >
                 <span aria-hidden="true">◷</span>
-                {`Daily programs${selectedClass ? ` - ${selectedClass.name}` : ''}`}
+                {isTeacher ? `Daily programs${selectedClass ? ` - ${selectedClass.name}` : ''}` : 'Daily Streak Program.'}
               </button>
             </nav>
           ) : !teacherGradeBand ? (
